@@ -1,0 +1,20 @@
+name: philadelphia-parcels-map
+services:
+- name: web
+  source_dir: /
+  github:
+    repo: your-username/philadelphia-parcels-map
+    branch: main
+    deploy_on_push: true
+  run_command: echo "Static site ready"
+  build_command: ./build.sh
+  environment_slug: html
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 8080
+  routes:
+  - path: /
+  envs:
+  - key: MAPBOX_TOKEN
+    scope: BUILD_TIME
+    type: SECRET

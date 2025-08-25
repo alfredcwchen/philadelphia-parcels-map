@@ -1,0 +1,12 @@
+{
+    "GeoJsonLayerData": {{ qryGenerateGeoJsonData.data }},
+      "searchInput":{{ qrySearchInput.data}} ,
+      "selectedFeatureProperties":null,
+      "PolygonData":null,
+      "DPData":null,
+      "selectedParcel":null,
+      "propertyInfo":{{ qryGetPropertyInfoByPID.data }},
+    
+    
+    }
+    
