@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Philadelphia Parcels Map with Popups</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+        
+        /* Professional popup table styles */
+        /* Override Mapbox popup default styles */
+        .mapboxgl-popup {
+            max-width: none !important;
+        }
+        
+        .mapboxgl-popup-content {
+            max-width: none !important;
+            width: 400px !important;
+            min-width: 400px !important;
+            padding: 0 !important;
+            border-radius: 8px !important;
+        }
+        
+        .mapboxgl-popup-tip {
+            border-top-color: #ffffff !important;
+            border-bottom-color: #ffffff !important;
+        }
+        
+        .popup-container {
+            width: 400px;
+            max-width: 400px;
+            max-height: 500px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 13px;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        
+        .popup-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .property-table {
+            width: 360px;
+            border-collapse: collapse;
+            margin: 8px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .property-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .property-table tr:hover {
+            background-color: #e3f2fd;
+        }
+        
+        .property-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        
+        .property-table td:first-child {
+            font-weight: 600;
+            color: #495057;
+            width: 40%;
+            background-color: #f8f9fa;
+        }
+        
+        .property-table td:last-child {
+            color: #212529;
+        }
+        
+        .property-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .selection-card {
+            border: 1px solid #dee2e6;
+            margin: 8px 0;
+            padding: 12px;
+            background: #ffffff;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .selection-card:hover {
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .selection-card-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .selection-card-subtitle {
+            color: #6c757d;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+        
+        .selection-card-hint {
+            color: #868e96;
+            font-size: 11px;
+            font-style: italic;
+        }
+        
+        .popup-button {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .popup-button:hover {
+            background: linear-gradient(135deg, #2980b9, #1f5f8b);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .scrollable-content {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 4px;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .scrollable-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+        }
+        
+        /* Collapsible group styles */
+        .property-group {
+            margin: 8px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .group-header {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 12px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        
+        .group-header:hover {
+            background: linear-gradient(135deg, #e9ecef, #dee2e6);
+        }
+        
+        .group-header.collapsed {
+            border-bottom: none;
+        }
+        
+        .group-icon {
+            font-size: 12px;
+            transition: transform 0.2s ease;
+            color: #6c757d;
+        }
+        
+        .group-header.collapsed .group-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .group-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .group-content.collapsed {
+            max-height: 0;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            width: 100%;
+        }
+        
+        .table-wrapper::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .group-table {
+            width: 360px;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        .group-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .group-table tr:hover {
+            background-color: #e3f2fd;
+        }
+        
+        .group-table td {
+            padding: 8px 16px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        
+        .group-table td:first-child {
+            font-weight: 500;
+            color: #495057;
+            width: 40%;
+        }
+        
+        .group-table td:last-child {
+            color: #212529;
+        }
+        
+        .group-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+        
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: fixed;
+            bottom: auto;
+            top: auto;
+            left: auto;
+            right: auto;
+            transform: none;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            max-width: 300px;
+            min-width: 100px;
+            pointer-events: none;
+            opacity: 0;
+            animation: tooltipFade 0.2s ease-in-out forwards;
+        }
+        
+        @keyframes tooltipFade {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .tooltip:hover::before {
+            content: '';
+            position: fixed;
+            border: 6px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+            z-index: 9999;
+            pointer-events: none;
+        }
+        
+        .truncated-text {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        .group-table td .truncated-text {
+            max-width: 180px;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoidGVycmFkb3RzIiwiYSI6ImNsMTNzdGljZDAxMzQzZG93ZXR2c3JrNW8ifQ.IhYvU1tLSWON5qqcQ4zIcg';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [-75.163471, 39.952583], // Philadelphia center coordinates
+        zoom: 11
+    });
+
+    // Property grouping configuration
+    const propertyGroups = {
+        'Basic Information': ['TENCODE', 'tencode', 'ADDRESS', 'address', 'OWNERNAME', 'ownername', 'PROPERTYTYPE', 'propertytype'],
+        'Location Details': ['STREET', 'street', 'WARD', 'ward', 'BLOCK', 'block', 'LOT', 'lot', 'UNIT', 'unit'],
+        'Assessment Info': ['ASSESSEDVALUE', 'assessedvalue', 'MARKETVALUE', 'marketvalue', 'TAXABLE', 'taxable', 'EXEMPT', 'exempt'],
+        'Building Details': ['STORIES', 'stories', 'YEARBUILT', 'yearbuilt', 'SQFT', 'sqft', 'BEDROOMS', 'bedrooms', 'BATHROOMS', 'bathrooms'],
+        'Zoning & Land Use': ['ZONING', 'zoning', 'LANDUSE', 'landuse', 'LOTSIZE', 'lotsize', 'FRONTAGE', 'frontage'],
+        'Other Properties': [] // Fallback for any unmatched properties
+    };
+
+    // Function to group properties
+    function groupProperties(feature) {
+        const grouped = {};
+        const usedProps = new Set();
+        
+        // Initialize all groups
+        Object.keys(propertyGroups).forEach(groupName => {
+            grouped[groupName] = {};
+        });
+        
+        // Assign properties to groups
+        Object.entries(feature).forEach(([key, value]) => {
+            let assigned = false;
+            
+            for (const [groupName, keywords] of Object.entries(propertyGroups)) {
+                if (groupName === 'Other Properties') continue;
+                
+                if (keywords.some(keyword => key.toLowerCase().includes(keyword.toLowerCase()))) {
+                    grouped[groupName][key] = value;
+                    usedProps.add(key);
+                    assigned = true;
+                    break;
+                }
+            }
+            
+            // If not assigned to any specific group, add to "Other Properties"
+            if (!assigned) {
+                grouped['Other Properties'][key] = value;
+            }
+        });
+        
+        // Remove empty groups
+        Object.keys(grouped).forEach(groupName => {
+            if (Object.keys(grouped[groupName]).length === 0) {
+                delete grouped[groupName];
+            }
+        });
+        
+        return grouped;
+    }
+
+    // Function to toggle group visibility
+    window.toggleGroup = function(groupId) {
+        const header = document.getElementById(groupId + '-header');
+        const content = document.getElementById(groupId + '-content');
+        const icon = document.getElementById(groupId + '-icon');
+        
+        if (content.classList.contains('collapsed')) {
+            content.classList.remove('collapsed');
+            header.classList.remove('collapsed');
+            icon.innerHTML = '▼';
+        } else {
+            content.classList.add('collapsed');
+            header.classList.add('collapsed');
+            icon.innerHTML = '▶';
+        }
+    };
+
+    // Function to create truncated text with tooltip
+    function createTruncatedContent(text, maxLength = 10) {
+        if (!text || text === null || text === undefined) return 'N/A';
+        
+        const textStr = String(text).trim();
+        
+        // For testing - if it's a short string, let's simulate a longer one occasionally
+        // Remove this in production
+        /*
+        if (textStr.length < 15 && Math.random() < 0.3) {
+            const longText = textStr + " - This is a very long additional description that should trigger the truncation and tooltip functionality to demonstrate how it works with lengthy property values";
+            if (longText.length > maxLength) {
+                const escapedText = longText
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#x27;');
+                return `<span class="tooltip truncated-text" data-tooltip="${escapedText}" onmouseenter="showTooltip(event, '${escapedText}')" onmouseleave="hideTooltip()">${longText}</span>`;
+            }
+        }
+        */
+        if (textStr.length <= maxLength) {
+            return textStr;
+        }
+        
+        // Escape HTML characters for tooltip
+        const escapedText = textStr
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
+            
+        return `<span class="tooltip truncated-text" data-tooltip="${escapedText}" onmouseenter="showTooltip(event, '${escapedText}')" onmouseleave="hideTooltip()">${textStr}</span>`;
+    }
+
+    // JavaScript tooltip functions
+    let currentTooltip = null;
+    
+    window.showTooltip = function(event, text) {
+        hideTooltip(); // Remove any existing tooltip
+        
+        const tooltip = document.createElement('div');
+        tooltip.className = 'js-tooltip';
+        tooltip.textContent = text;
+        tooltip.style.cssText = `
+            position: fixed;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            max-width: 300px;
+            min-width: 100px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        `;
+        
+        document.body.appendChild(tooltip);
+        
+        // Position tooltip
+        const rect = event.target.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        
+        let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+        let top = rect.top - tooltipRect.height - 10;
+        
+        // Adjust if tooltip goes off screen
+        if (left < 10) left = 10;
+        if (left + tooltipRect.width > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipRect.width - 10;
+        }
+        if (top < 10) {
+            top = rect.bottom + 10;
+        }
+        
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+        
+        // Fade in
+        requestAnimationFrame(() => {
+            tooltip.style.opacity = '1';
+        });
+        
+        currentTooltip = tooltip;
+    };
+    
+    window.hideTooltip = function() {
+        if (currentTooltip) {
+            currentTooltip.remove();
+            currentTooltip = null;
+        }
+    };
+
+    // Global function to show detailed feature information
+    window.showFeatureDetails = function(featureIndex) {
+        const feature = window.currentFeatures[featureIndex];
+        const lngLat = window.currentLngLat;
+        
+        if (!feature) return;
+        
+        // Group properties into categories
+        const groupedProps = groupProperties(feature);
+        
+        // Create detailed popup content with collapsible groups
+        let popupContent = '<div class="popup-container">';
+        popupContent += '<div class="popup-title">Selected Parcel Details</div>';
+        popupContent += '<div class="scrollable-content">';
+        
+        let groupIndex = 0;
+        for (const [groupName, properties] of Object.entries(groupedProps)) {
+            const groupId = `group-${groupIndex}`;
+            const isFirst = groupIndex === 0;
+            
+            popupContent += `<div class="property-group">`;
+            popupContent += `<div class="group-header ${!isFirst ? 'collapsed' : ''}" id="${groupId}-header" onclick="toggleGroup('${groupId}')">`;
+            popupContent += `<span>${groupName} (${Object.keys(properties).length})</span>`;
+            popupContent += `<span class="group-icon" id="${groupId}-icon">${isFirst ? '▼' : '▶'}</span>`;
+            popupContent += `</div>`;
+            popupContent += `<div class="group-content ${!isFirst ? 'collapsed' : ''}" id="${groupId}-content">`;
+            popupContent += `<div class="table-wrapper">`;
+            popupContent += `<table class="group-table">`;
+            
+            for (const [key, value] of Object.entries(properties)) {
+                const truncatedValue = createTruncatedContent(value);
+                popupContent += `<tr><td>${key}</td><td>${truncatedValue}</td></tr>`;
+            }
+            
+            popupContent += `</table></div></div></div>`;
+            groupIndex++;
+        }
+        
+        popupContent += '</div>';
+        popupContent += '<button onclick="showFeatureSelection()" class="popup-button">← Back to Selection</button>';
+        popupContent += '</div>';
+        
+        // Close current popup and show detailed one
+        const popups = document.getElementsByClassName('mapboxgl-popup');
+        for (let i = 0; i < popups.length; i++) {
+            popups[i].remove();
+        }
+        
+        new mapboxgl.Popup()
+            .setLngLat(lngLat)
+            .setHTML(popupContent)
+            .addTo(map);
+    };
+    
+    // Function to go back to feature selection
+    window.showFeatureSelection = function() {
+        const features = window.currentFeatures;
+        const lngLat = window.currentLngLat;
+        
+        if (!features || !lngLat) return;
+        
+        // Recreate selection popup with professional styling
+        let popupContent = '<div class="popup-container">';
+        popupContent += `<div class="popup-title">Multiple Parcels Found (${features.length})</div>`;
+        popupContent += '<div class="scrollable-content">';
+        
+        features.forEach((feature, index) => {
+            const tencode = feature.TENCODE || feature.tencode || 'N/A';
+            const address = feature.ADDRESS || feature.address || 'No Address';
+            
+            popupContent += `<div class="selection-card" onclick="showFeatureDetails(${index})">`;
+            popupContent += `<div class="selection-card-title">TENCODE: ${tencode}</div>`;
+            popupContent += `<div class="selection-card-subtitle">Address: ${address}</div>`;
+            popupContent += '<div class="selection-card-hint">Click to view full details</div>';
+            popupContent += '</div>';
+        });
+        
+        popupContent += '</div></div>';
+        
+        // Close current popup and show selection one
+        const popups = document.getElementsByClassName('mapboxgl-popup');
+        for (let i = 0; i < popups.length; i++) {
+            popups[i].remove();
+        }
+        
+        new mapboxgl.Popup()
+            .setLngLat(lngLat)
+            .setHTML(popupContent)
+            .addTo(map);
+    };
+
+    map.on('load', () => {
+
+        map.addSource('philly-parcels-wms', {
+        'type': 'raster',
+        'tiles': [
+            'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
+            'SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=16&STYLES=&FORMAT=image/png' +
+            '&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&TRANSPARENT=true'
+        ],
+        'tileSize': 256,
+        'attribution': 'Philadelphia Parcels WMS',
+        'queryable': true
+        });
+
+        map.addLayer({
+        'id': 'philly-parcels-wms-layer',
+        'type': 'raster',
+        'source': 'philly-parcels-wms',
+        'paint': {
+            'raster-opacity': 0.6
+        },
+        'minzoom': 14
+        });
+
+        // Add click event for WMS GetFeatureInfo
+        map.on('click', (e) => {
+            // Only show popups when parcels are visible (zoom 14+)
+            if (map.getZoom() >= 14) {
+                // Use geographic coordinates instead of pixel coordinates
+                const lng = e.lngLat.lng;
+                const lat = e.lngLat.lat;
+                
+                console.log('Click details:', { lng, lat, zoom: map.getZoom() });
+                
+                // Try WMS GetFeatureInfo using geographic coordinates with ultra-precise bbox
+                const tryFeatureInfo = () => {
+                    // Use extremely small bbox for pinpoint parcel selection (~0.3m x 0.3m)
+                    const bboxSize = 0.0000001; // ~0.33m at Philadelphia latitude
+                    const featureInfoUrl = 'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
+                        'SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=16&QUERY_LAYERS=16' +
+                        '&STYLES=&FORMAT=image/png&INFO_FORMAT=text/html' +
+                        '&SRS=EPSG:4326' +
+                        `&BBOX=${lng-bboxSize},${lat-bboxSize},${lng+bboxSize},${lat+bboxSize}` +
+                        `&WIDTH=1&HEIGHT=1` +
+                        `&X=0&Y=0` +
+                        '&FEATURE_COUNT=10';
+                    
+                    return fetch(featureInfoUrl)
+                        .then(response => response.text())
+                        .then(text => {
+                            console.log(`WMS response for coordinates (${lng},${lat}):`, text);
+                            console.log(`Response length: ${text.length} characters`);
+                            console.log(`Contains table data: ${text.includes('<td>') || text.includes('<tr>')}`);
+                            
+                            // Always show a popup for debugging - either data or debug info
+                            if (text.includes('<td>') || text.includes('<tr>')) {
+                                // Parse multiple features from table data
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(text, 'text/html');
+                                const table = doc.querySelector('table');
+                                
+                                if (table) {
+                                    const rows = table.querySelectorAll('tr');
+                                    let headers = [];
+                                    let features = [];
+                                    
+                                    // Extract headers and all feature rows
+                                    rows.forEach((row, rowIndex) => {
+                                        const cells = row.querySelectorAll('td, th');
+                                        if (rowIndex === 0) {
+                                            // First row contains headers
+                                            cells.forEach((cell, cellIndex) => {
+                                                headers[cellIndex] = cell.textContent.trim();
+                                            });
+                                        } else {
+                                            // Data rows contain feature values
+                                            let feature = {};
+                                            cells.forEach((cell, cellIndex) => {
+                                                if (headers[cellIndex]) {
+                                                    feature[headers[cellIndex]] = cell.textContent.trim();
+                                                }
+                                            });
+                                            if (Object.keys(feature).length > 0) {
+                                                features.push(feature);
+                                            }
+                                        }
+                                    });
+                                    
+                                    // Create popup content based on number of features
+                                    let popupContent = '<div class="popup-container">';
+                                    
+                                    if (features.length === 1) {
+                                        // Single feature - display with grouped structure
+                                        const feature = features[0];
+                                        const groupedProps = groupProperties(feature);
+                                        
+                                        popupContent += '<div class="popup-title">Parcel Information</div>';
+                                        popupContent += '<div class="scrollable-content">';
+                                        
+                                        let groupIndex = 0;
+                                        for (const [groupName, properties] of Object.entries(groupedProps)) {
+                                            const groupId = `single-group-${groupIndex}`;
+                                            const isFirst = groupIndex === 0;
+                                            
+                                            popupContent += `<div class="property-group">`;
+                                            popupContent += `<div class="group-header ${!isFirst ? 'collapsed' : ''}" id="${groupId}-header" onclick="toggleGroup('${groupId}')">`;
+                                            popupContent += `<span>${groupName} (${Object.keys(properties).length})</span>`;
+                                            popupContent += `<span class="group-icon" id="${groupId}-icon">${isFirst ? '▼' : '▶'}</span>`;
+                                            popupContent += `</div>`;
+                                            popupContent += `<div class="group-content ${!isFirst ? 'collapsed' : ''}" id="${groupId}-content">`;
+                                            popupContent += `<div class="table-wrapper">`;
+                                            popupContent += `<table class="group-table">`;
+                                            
+                                            for (const [key, value] of Object.entries(properties)) {
+                                                const truncatedValue = createTruncatedContent(value);
+                                                popupContent += `<tr><td>${key}</td><td>${truncatedValue}</td></tr>`;
+                                            }
+                                            
+                                            popupContent += `</table></div></div></div>`;
+                                            groupIndex++;
+                                        }
+                                        
+                                        popupContent += '</div>';
+                                    } else if (features.length > 1) {
+                                        // Multiple features - create selection interface
+                                        popupContent += `<div class="popup-title">Multiple Parcels Found (${features.length})</div>`;
+                                        popupContent += '<div class="scrollable-content">';
+                                        
+                                        features.forEach((feature, index) => {
+                                            const tencode = feature.TENCODE || feature.tencode || 'N/A';
+                                            const address = feature.ADDRESS || feature.address || 'No Address';
+                                            
+                                            popupContent += `<div class="selection-card" onclick="showFeatureDetails(${index})">`;
+                                            popupContent += `<div class="selection-card-title">TENCODE: ${tencode}</div>`;
+                                            popupContent += `<div class="selection-card-subtitle">Address: ${address}</div>`;
+                                            popupContent += '<div class="selection-card-hint">Click to view full details</div>';
+                                            popupContent += '</div>';
+                                        });
+                                        
+                                        popupContent += '</div>';
+                                        
+                                        // Store features data globally for selection
+                                        window.currentFeatures = features;
+                                        window.currentLngLat = e.lngLat;
+                                    } else {
+                                        popupContent += '<div class="no-data">No parcel data found</div>';
+                                    }
+                                    
+                                    popupContent += '</div>';
+                                    
+                                    new mapboxgl.Popup()
+                                        .setLngLat(e.lngLat)
+                                        .setHTML(popupContent)
+                                        .addTo(map);
+                                } else {
+                                    let popupContent = '<div class="popup-container">';
+                                    popupContent += '<div class="popup-title">Parcel Information</div>';
+                                    popupContent += '<div class="no-data">No structured data found</div>';
+                                    popupContent += '</div>';
+                                    
+                                    new mapboxgl.Popup()
+                                        .setLngLat(e.lngLat)
+                                        .setHTML(popupContent)
+                                        .addTo(map);
+                                }
+                            } else {
+                                // Show debug info even when no table data
+                                new mapboxgl.Popup()
+                                    .setLngLat(e.lngLat)
+                                    .setHTML(`<div class="popup-container">
+                                        <div class="popup-title">Debug Info (${lng.toFixed(6)},${lat.toFixed(6)})</div>
+                                        <div class="scrollable-content" style="max-height: 200px; font-size: 11px;">
+                                            <table class="property-table">
+                                                <tr><td>URL</td><td style="word-break: break-all;">${featureInfoUrl}</td></tr>
+                                                <tr><td>Response Length</td><td>${text.length}</td></tr>
+                                                <tr><td>Response Preview</td><td style="word-break: break-all;">${text.substring(0, 300)}...</td></tr>
+                                            </table>
+                                        </div>
+                                    </div>`)
+                                    .addTo(map);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching feature info:', error);
+                            new mapboxgl.Popup()
+                                .setLngLat(e.lngLat)
+                                .setHTML(`<div class="popup-container">
+                                    <div class="popup-title">Error</div>
+                                    <div class="no-data">Error: ${error.message}</div>
+                                </div>`)
+                                .addTo(map);
+                        });
+                };
+                
+                tryFeatureInfo();
+            }
+        });
+
+        // Change cursor to pointer when hovering over the map
+        map.on('mouseenter', () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', () => {
+            map.getCanvas().style.cursor = '';
+        });
+
+    });
+</script>
+</body>
+</html>

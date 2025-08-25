@@ -1,0 +1,9 @@
+# Ignore temporary and backup files
+*.tmp
+*.bak
+*~
+.DS_Store
+
+# Ignore other HTML files (keep only index.html for deployment)
+mapbox_retool_*.html
+!index.html
