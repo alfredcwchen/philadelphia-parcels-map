@@ -17,3 +17,6 @@ mapbox_retool_*.html
 
 # Ignore build output (will be generated)
 dist/
+
+# Ignore local deployment guide (contains sensitive info)
+Deploy2DigitalOcean.md
