@@ -4,6 +4,13 @@
 *~
 .DS_Store
 
+# Ignore large geojson files
+geojson/
+*.geojson
+
 # Ignore other HTML files (keep only index.html for deployment)
 mapbox_retool_*.html
 !index.html
+
+# Ignore build output (will be generated)
+dist/
