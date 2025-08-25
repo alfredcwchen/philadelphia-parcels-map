@@ -8,6 +8,9 @@
 geojson/
 *.geojson
 
+# Ignore JSON model files (not needed for this app)
+*.json
+
 # Ignore other HTML files (keep only index.html for deployment)
 mapbox_retool_*.html
 !index.html
