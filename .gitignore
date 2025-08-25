@@ -17,6 +17,13 @@ mapbox_retool_*.html
 
 # Ignore build output (will be generated)
 dist/
+dev-dist/
+
+# Ignore environment files (contain sensitive tokens)
+.env
+
+# Ignore development HTML file with injected token
+index-dev.html
 
 # Ignore local deployment guide (contains sensitive info)
 Deploy2DigitalOcean.md

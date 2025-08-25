@@ -347,8 +347,8 @@
 <body>
 <div id="map"></div>
 <script>
-    // Token will be injected during build
-    mapboxgl.accessToken = '__MAPBOX_TOKEN__';
+    // Token will be injected during build or loaded from .env for local development
+    mapboxgl.accessToken = '{{MAPBOX_ACCESS_TOKEN}}';
     const map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v11',
