@@ -383,7 +383,7 @@
             for (const [groupName, keywords] of Object.entries(propertyGroups)) {
                 if (groupName === 'Other Properties') continue;
                 
-                if (keywords.some(keyword => key.toLowerCase().includes(keyword.toLowerCase()))) {
+                if (keywords.some(keyword => key.toLowerCase() === keyword.toLowerCase())) {
                     grouped[groupName][key] = value;
                     usedProps.add(key);
                     assigned = true;
@@ -497,13 +497,21 @@
         let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
         let top = rect.top - tooltipRect.height - 10;
         
-        // Adjust if tooltip goes off screen
-        if (left < 10) left = 10;
-        if (left + tooltipRect.width > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipRect.width - 10;
+        // Adjust if tooltip goes off screen - account for popup containers
+        const margin = 15;
+        const popupContainer = event.target.closest('.popup-container');
+        const containerRect = popupContainer ? popupContainer.getBoundingClientRect() : { left: 0, right: window.innerWidth };
+        
+        if (left < containerRect.left + margin) left = containerRect.left + margin;
+        if (left + tooltipRect.width > Math.min(containerRect.right, window.innerWidth) - margin) {
+            left = Math.min(containerRect.right, window.innerWidth) - tooltipRect.width - margin;
         }
-        if (top < 10) {
+        if (top < margin) {
             top = rect.bottom + 10;
+        }
+        // Ensure tooltip doesn't go below viewport
+        if (top + tooltipRect.height > window.innerHeight - margin) {
+            top = rect.top - tooltipRect.height - 10;
         }
         
         tooltip.style.left = left + 'px';
@@ -526,10 +534,23 @@
 
     // Global function to show detailed feature information
     window.showFeatureDetails = function(featureIndex) {
+        if (!window.currentFeatures || !Array.isArray(window.currentFeatures)) {
+            console.error('No features data available');
+            return;
+        }
+        
+        if (featureIndex < 0 || featureIndex >= window.currentFeatures.length) {
+            console.error('Feature index out of bounds:', featureIndex);
+            return;
+        }
+        
         const feature = window.currentFeatures[featureIndex];
         const lngLat = window.currentLngLat;
         
-        if (!feature) return;
+        if (!feature || !lngLat) {
+            console.error('Invalid feature or location data');
+            return;
+        }
         
         // Group properties into categories
         const groupedProps = groupProperties(feature);
@@ -583,7 +604,10 @@
         const features = window.currentFeatures;
         const lngLat = window.currentLngLat;
         
-        if (!features || !lngLat) return;
+        if (!features || !Array.isArray(features) || features.length === 0 || !lngLat) {
+            console.error('Invalid features data or location');
+            return;
+        }
         
         // Recreate selection popup with professional styling
         let popupContent = '<div class="popup-container">';
@@ -591,8 +615,8 @@
         popupContent += '<div class="scrollable-content">';
         
         features.forEach((feature, index) => {
-            const tencode = feature.TENCODE || feature.tencode || 'N/A';
-            const address = feature.ADDRESS || feature.address || 'No Address';
+            const tencode = feature.TENCODE || feature.tencode || feature.Tencode || 'N/A';
+            const address = feature.ADDRESS || feature.address || feature.Address || 'No Address';
             
             popupContent += `<div class="selection-card" onclick="showFeatureDetails(${index})">`;
             popupContent += `<div class="selection-card-title">TENCODE: ${tencode}</div>`;
@@ -615,6 +639,15 @@
             .addTo(map);
     };
 
+    // Configuration constants
+    const MAP_CONFIG = {
+        MIN_ZOOM_FOR_PARCELS: 14,
+        BBOX_PRECISION: 0.0000001 // ~0.33m at Philadelphia latitude
+    };
+    
+    // Race condition protection
+    let isClickProcessing = false;
+    
     map.on('load', () => {
 
         map.addSource('philly-parcels-wms', {
@@ -636,13 +669,16 @@
         'paint': {
             'raster-opacity': 0.6
         },
-        'minzoom': 14
+        'minzoom': MAP_CONFIG.MIN_ZOOM_FOR_PARCELS
         });
 
         // Add click event for WMS GetFeatureInfo
         map.on('click', (e) => {
-            // Only show popups when parcels are visible (zoom 14+)
-            if (map.getZoom() >= 14) {
+            // Only show popups when parcels are visible (zoom level check)
+            if (map.getZoom() >= MAP_CONFIG.MIN_ZOOM_FOR_PARCELS) {
+                // Prevent race conditions from multiple rapid clicks
+                if (isClickProcessing) return;
+                isClickProcessing = true;
                 // Use geographic coordinates instead of pixel coordinates
                 const lng = e.lngLat.lng;
                 const lat = e.lngLat.lat;
@@ -652,7 +688,7 @@
                 // Try WMS GetFeatureInfo using geographic coordinates with ultra-precise bbox
                 const tryFeatureInfo = () => {
                     // Use extremely small bbox for pinpoint parcel selection (~0.3m x 0.3m)
-                    const bboxSize = 0.0000001; // ~0.33m at Philadelphia latitude
+                    const bboxSize = MAP_CONFIG.BBOX_PRECISION;
                     const featureInfoUrl = 'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
                         'SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.1.1&LAYERS=16&QUERY_LAYERS=16' +
                         '&STYLES=&FORMAT=image/png&INFO_FORMAT=text/html' +
@@ -744,8 +780,8 @@
                                         popupContent += '<div class="scrollable-content">';
                                         
                                         features.forEach((feature, index) => {
-                                            const tencode = feature.TENCODE || feature.tencode || 'N/A';
-                                            const address = feature.ADDRESS || feature.address || 'No Address';
+                                            const tencode = feature.TENCODE || feature.tencode || feature.Tencode || 'N/A';
+                                            const address = feature.ADDRESS || feature.address || feature.Address || 'No Address';
                                             
                                             popupContent += `<div class="selection-card" onclick="showFeatureDetails(${index})">`;
                                             popupContent += `<div class="selection-card-title">TENCODE: ${tencode}</div>`;
@@ -806,6 +842,10 @@
                                     <div class="no-data">Error: ${error.message}</div>
                                 </div>`)
                                 .addTo(map);
+                        })
+                        .finally(() => {
+                            // Reset flag after processing is complete
+                            isClickProcessing = false;
                         });
                 };
                 
