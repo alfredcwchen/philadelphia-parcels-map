@@ -10,6 +10,44 @@
         body { margin:0; padding:0; }
         #map { position:absolute; top:0; bottom:0; width:100%; }
         
+        /* Layer toggle control */
+        .layer-control {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 13px;
+            z-index: 1;
+        }
+        
+        .layer-control h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .layer-toggle {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            cursor: pointer;
+        }
+        
+        .layer-toggle input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        
+        .layer-toggle label {
+            cursor: pointer;
+            user-select: none;
+        }
+        
         /* Professional popup table styles */
         /* Override Mapbox popup default styles */
         .mapboxgl-popup {
@@ -346,6 +384,17 @@
 </head>
 <body>
 <div id="map"></div>
+<div class="layer-control">
+    <h3>Map Layers</h3>
+    <div class="layer-toggle">
+        <input type="checkbox" id="philly-toggle" checked>
+        <label for="philly-toggle">Philadelphia Parcels</label>
+    </div>
+    <div class="layer-toggle">
+        <input type="checkbox" id="hk-toggle">
+        <label for="hk-toggle">Hong Kong Land Registry</label>
+    </div>
+</div>
 <script>
     // Token will be injected during build or loaded from .env for local development
     mapboxgl.accessToken = '{{MAPBOX_ACCESS_TOKEN}}';
@@ -650,6 +699,7 @@
     
     map.on('load', () => {
 
+        // Philadelphia Parcels WMS
         map.addSource('philly-parcels-wms', {
         'type': 'raster',
         'tiles': [
@@ -670,6 +720,36 @@
             'raster-opacity': 0.6
         },
         'minzoom': MAP_CONFIG.MIN_ZOOM_FOR_PARCELS
+        });
+
+        // Hong Kong Land Registry WMS (with CORS proxy for local development)
+        // When deployed to DigitalOcean, you can try without proxy first
+        const useProxy = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const corsProxy = useProxy ? 'https://corsproxy.io/?' : '';
+        
+        map.addSource('hk-land-wms', {
+        'type': 'raster',
+        'tiles': [
+            corsProxy + 'https://portal.csdi.gov.hk/server/services/common/landsd_rcd_1637217253134_22729/MapServer/WMSServer?' +
+            'SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=0&STYLES=&FORMAT=image/png' +
+            '&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&TRANSPARENT=true'
+        ],
+        'tileSize': 256,
+        'attribution': 'Hong Kong Land Registry',
+        'queryable': true
+        });
+
+        map.addLayer({
+        'id': 'hk-land-wms-layer',
+        'type': 'raster',
+        'source': 'hk-land-wms',
+        'paint': {
+            'raster-opacity': 0.6
+        },
+        'minzoom': 14,
+        'layout': {
+            'visibility': 'none'
+        }
         });
 
         // Add click event for WMS GetFeatureInfo
@@ -861,6 +941,17 @@
             map.getCanvas().style.cursor = '';
         });
 
+    });
+
+    // Layer toggle controls
+    document.getElementById('philly-toggle').addEventListener('change', function(e) {
+        const visibility = e.target.checked ? 'visible' : 'none';
+        map.setLayoutProperty('philly-parcels-wms-layer', 'visibility', visibility);
+    });
+
+    document.getElementById('hk-toggle').addEventListener('change', function(e) {
+        const visibility = e.target.checked ? 'visible' : 'none';
+        map.setLayoutProperty('hk-land-wms-layer', 'visibility', visibility);
     });
 </script>
 </body>
