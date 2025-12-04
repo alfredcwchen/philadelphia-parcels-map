@@ -13,6 +13,7 @@ geoJSON/
 
 # Ignore JSON model files (not needed for this app)
 *.json
+!tile-server/package*.json
 
 # Ignore other HTML files (keep only index.html for deployment)
 mapbox_retool_*.html
@@ -29,4 +30,4 @@ dev-dist/
 index-dev.html
 
 # Ignore local deployment guide (contains sensitive info)
-Deploy2DigitalOcean.md
+Deploy2DigitalOcean.mdtile-server/node_modules/
