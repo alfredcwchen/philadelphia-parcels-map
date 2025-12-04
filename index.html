@@ -391,13 +391,21 @@
         <label for="philly-toggle">Philadelphia Parcels</label>
     </div>
     <div class="layer-toggle">
-        <input type="checkbox" id="hk-toggle">
-        <label for="hk-toggle">Hong Kong Land Registry</label>
+        <input type="checkbox" id="hk-parcels-toggle">
+        <label for="hk-parcels-toggle">Hong Kong Parcels</label>
     </div>
+    <div class="layer-toggle">
+        <input type="checkbox" id="hk-buildings-toggle">
+        <label for="hk-buildings-toggle">Hong Kong Buildings</label>
+    </div>
+    <hr style="margin: 10px 0; border-color: #ddd;">
+    <button id="goto-philly" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px;">Go to Philadelphia</button>
+    <button id="goto-hk" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #ff6600; color: white; border: none; border-radius: 4px;">Go to Hong Kong</button>
 </div>
 <script>
     // Token will be injected during build or loaded from .env for local development
     mapboxgl.accessToken = '{{MAPBOX_ACCESS_TOKEN}}';
+    
     const map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v11',
@@ -722,51 +730,127 @@
         'minzoom': MAP_CONFIG.MIN_ZOOM_FOR_PARCELS
         });
 
-        // Hong Kong Land Registry WMS (with CORS proxy for local development)
-        // When deployed to DigitalOcean, you can try without proxy first
-        const useProxy = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const corsProxy = useProxy ? 'https://corsproxy.io/?' : '';
-        
-        map.addSource('hk-land-wms', {
-        'type': 'raster',
-        'tiles': [
-            corsProxy + 'https://portal.csdi.gov.hk/server/services/common/landsd_rcd_1637217253134_22729/MapServer/WMSServer?' +
-            'SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=0&STYLES=&FORMAT=image/png' +
-            '&CRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&TRANSPARENT=true'
-        ],
-        'tileSize': 256,
-        'attribution': 'Hong Kong Land Registry',
-        'queryable': true
+        // Hong Kong Land Parcels - GeoJSON
+        map.addSource('hk-parcels-geojson', {
+            type: 'geojson',
+            data: 'geoJSON/HKGIS/LandParcel_Lot_HK_wgs84.geojson'
         });
 
         map.addLayer({
-        'id': 'hk-land-wms-layer',
-        'type': 'raster',
-        'source': 'hk-land-wms',
-        'paint': {
-            'raster-opacity': 0.6
-        },
-        'minzoom': 14,
-        'layout': {
-            'visibility': 'none'
-        }
+            'id': 'hk-parcels-fill',
+            'type': 'fill',
+            'source': 'hk-parcels-geojson',
+            'paint': {
+                'fill-color': '#ff6600',
+                'fill-opacity': 0.5
+            },
+            'layout': {
+                'visibility': 'none'
+            }
         });
 
-        // Add click event for WMS GetFeatureInfo
+        map.addLayer({
+            'id': 'hk-parcels-outline',
+            'type': 'line',
+            'source': 'hk-parcels-geojson',
+            'paint': {
+                'line-color': '#ff0000',
+                'line-width': 1
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+
+        // Hong Kong Buildings - GeoJSON
+        map.addSource('hk-buildings-geojson', {
+            type: 'geojson',
+            data: 'geoJSON/HKGIS/Building_HK_wgs84.geojson'
+        });
+
+        map.addLayer({
+            'id': 'hk-buildings-fill',
+            'type': 'fill',
+            'source': 'hk-buildings-geojson',
+            'paint': {
+                'fill-color': '#3498db',
+                'fill-opacity': 0.6
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+
+        map.addLayer({
+            'id': 'hk-buildings-outline',
+            'type': 'line',
+            'source': 'hk-buildings-geojson',
+            'paint': {
+                'line-color': '#2c3e50',
+                'line-width': 1
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+
+        // Add click event for parcels
         map.on('click', (e) => {
             // Only show popups when parcels are visible (zoom level check)
             if (map.getZoom() >= MAP_CONFIG.MIN_ZOOM_FOR_PARCELS) {
                 // Prevent race conditions from multiple rapid clicks
                 if (isClickProcessing) return;
                 isClickProcessing = true;
-                // Use geographic coordinates instead of pixel coordinates
+                
                 const lng = e.lngLat.lng;
                 const lat = e.lngLat.lat;
                 
                 console.log('Click details:', { lng, lat, zoom: map.getZoom() });
                 
-                // Try WMS GetFeatureInfo using geographic coordinates with ultra-precise bbox
-                const tryFeatureInfo = () => {
+                // Check if HK layers are visible and query them first
+                const hkParcelsVisible = map.getLayoutProperty('hk-parcels-fill', 'visibility') !== 'none';
+                const hkBuildingsVisible = map.getLayoutProperty('hk-buildings-fill', 'visibility') !== 'none';
+                
+                if (hkParcelsVisible || hkBuildingsVisible) {
+                    const layers = [];
+                    if (hkParcelsVisible) layers.push('hk-parcels-fill');
+                    if (hkBuildingsVisible) layers.push('hk-buildings-fill');
+                    
+                    const features = map.queryRenderedFeatures(e.point, { layers });
+                    
+                    if (features.length > 0) {
+                        const feature = features[0];
+                        const layerType = feature.layer.id.includes('parcels') ? 'Land Parcel' : 'Building';
+                        
+                        let popupContent = '<div class="popup-container">';
+                        popupContent += `<div class="popup-title">Hong Kong ${layerType}</div>`;
+                        popupContent += '<div class="scrollable-content">';
+                        popupContent += '<table class="property-table">';
+                        
+                        for (const [key, value] of Object.entries(feature.properties)) {
+                            if (value !== null && value !== undefined && value !== '') {
+                                popupContent += `<tr><td class="prop-key">${key}</td><td class="prop-value">${value}</td></tr>`;
+                            }
+                        }
+                        
+                        popupContent += '</table></div></div>';
+                        
+                        new mapboxgl.Popup()
+                            .setLngLat(e.lngLat)
+                            .setHTML(popupContent)
+                            .addTo(map);
+                        
+                        isClickProcessing = false;
+                        return;
+                    }
+                }
+                
+                // Query Philadelphia WMS
+                queryPhiladelphiaWMS();
+                
+                function queryPhiladelphiaWMS() {
+                    // Use geographic coordinates instead of pixel coordinates
+                    const tryFeatureInfo = () => {
                     // Use extremely small bbox for pinpoint parcel selection (~0.3m x 0.3m)
                     const bboxSize = MAP_CONFIG.BBOX_PRECISION;
                     const featureInfoUrl = 'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
@@ -930,8 +1014,9 @@
                 };
                 
                 tryFeatureInfo();
-            }
-        });
+                } // End of queryPhiladelphiaWMS function
+            } // End of zoom level check
+        }); // End of map click handler
 
         // Change cursor to pointer when hovering over the map
         map.on('mouseenter', () => {
@@ -949,9 +1034,33 @@
         map.setLayoutProperty('philly-parcels-wms-layer', 'visibility', visibility);
     });
 
-    document.getElementById('hk-toggle').addEventListener('change', function(e) {
+    document.getElementById('hk-parcels-toggle').addEventListener('change', function(e) {
         const visibility = e.target.checked ? 'visible' : 'none';
-        map.setLayoutProperty('hk-land-wms-layer', 'visibility', visibility);
+        map.setLayoutProperty('hk-parcels-fill', 'visibility', visibility);
+        map.setLayoutProperty('hk-parcels-outline', 'visibility', visibility);
+    });
+
+    document.getElementById('hk-buildings-toggle').addEventListener('change', function(e) {
+        const visibility = e.target.checked ? 'visible' : 'none';
+        map.setLayoutProperty('hk-buildings-fill', 'visibility', visibility);
+        map.setLayoutProperty('hk-buildings-outline', 'visibility', visibility);
+    });
+
+    // Location navigation buttons
+    document.getElementById('goto-philly').addEventListener('click', function() {
+        map.flyTo({
+            center: [-75.163471, 39.952583],
+            zoom: 14,
+            essential: true
+        });
+    });
+
+    document.getElementById('goto-hk').addEventListener('click', function() {
+        map.flyTo({
+            center: [114.17, 22.31],
+            zoom: 14,
+            essential: true
+        });
     });
 </script>
 </body>

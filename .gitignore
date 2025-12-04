@@ -4,9 +4,12 @@
 *~
 .DS_Store
 
-# Ignore large geojson files
+# Ignore large geojson files (except Hong Kong WGS84 data needed for deployment)
 geojson/
+geoJSON/
 *.geojson
+!geoJSON/HKGIS/Building_HK_wgs84.geojson
+!geoJSON/HKGIS/LandParcel_Lot_HK_wgs84.geojson
 
 # Ignore JSON model files (not needed for this app)
 *.json
