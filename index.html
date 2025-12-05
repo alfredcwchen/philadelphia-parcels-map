@@ -702,12 +702,16 @@
     map.on('moveend', optimizeLayerLoading);
     map.on('zoomend', optimizeLayerLoading);
     
+    // Configure Google Maps API Key (replace with your actual key)
+    // To get a key: https://console.cloud.google.com/google/maps-apis/credentials
+    const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_API_KEY_HERE';
+    
     // Add geocoder (address search)
     const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
         marker: false,
-        placeholder: 'Search address (or try "Central HK", "Tsim Sha Tsui")',
+        placeholder: 'Search address (Hong Kong, US, Canada)',
         proximity: {
             longitude: -75.163471,
             latitude: 39.952583
@@ -716,33 +720,40 @@
         language: 'en',
         types: 'address,place,locality,neighborhood,poi,region',
         limit: 10,
-        // Add custom local geocoder for Hong Kong
-        localGeocoder: function(query) {
-            const hkPlaces = [
-                { place_name: 'Central, Hong Kong', center: [114.1577, 22.2819], place_type: ['place'] },
-                { place_name: 'Tsim Sha Tsui, Hong Kong', center: [114.1722, 22.2978], place_type: ['place'] },
-                { place_name: 'Causeway Bay, Hong Kong', center: [114.1850, 22.2799], place_type: ['place'] },
-                { place_name: 'Mong Kok, Hong Kong', center: [114.1697, 22.3193], place_type: ['place'] },
-                { place_name: 'Wan Chai, Hong Kong', center: [114.1729, 22.2769], place_type: ['place'] },
-                { place_name: 'Admiralty, Hong Kong', center: [114.1653, 22.2779], place_type: ['place'] },
-                { place_name: 'Quarry Bay, Hong Kong', center: [114.2125, 22.2887], place_type: ['place'] },
-                { place_name: 'Kowloon, Hong Kong', center: [114.1722, 22.3193], place_type: ['place'] },
-                { place_name: 'Hong Kong Island', center: [114.1742, 22.2569], place_type: ['place'] },
-                { place_name: 'Victoria Peak, Hong Kong', center: [114.1489, 22.2721], place_type: ['poi'] },
-                { place_name: 'Hong Kong Convention Centre', center: [114.1723, 22.2836], place_type: ['poi'] },
-                { place_name: 'Sha Tin, Hong Kong', center: [114.1952, 22.3811], place_type: ['place'] }
-            ];
+        // Use Google Geocoding API for better Hong Kong coverage
+        localGeocoder: async function(query) {
+            // If Google API key is not configured, return empty
+            if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_API_KEY_HERE') {
+                console.warn('Google Maps API key not configured. Set GOOGLE_MAPS_API_KEY to enable Google geocoding.');
+                return [];
+            }
             
-            const matchingPlaces = [];
-            const lowerQuery = query.toLowerCase();
-            
-            hkPlaces.forEach(place => {
-                if (place.place_name.toLowerCase().includes(lowerQuery)) {
-                    matchingPlaces.push(place);
+            try {
+                // Call Google Geocoding API
+                const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'OK' && data.results) {
+                    // Convert Google results to Mapbox format
+                    return data.results.slice(0, 5).map(result => ({
+                        place_name: result.formatted_address,
+                        center: [
+                            result.geometry.location.lng,
+                            result.geometry.location.lat
+                        ],
+                        place_type: ['place'],
+                        properties: {
+                            source: 'Google Geocoding API'
+                        },
+                        text: result.address_components[0]?.long_name || query
+                    }));
                 }
-            });
+            } catch (error) {
+                console.error('Google Geocoding API error:', error);
+            }
             
-            return matchingPlaces;
+            return [];
         }
     });
     
