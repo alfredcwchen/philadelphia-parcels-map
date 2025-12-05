@@ -591,9 +591,13 @@
         // Add click event listener to toggle button
         const toggleBtn = document.getElementById('toggle-control-btn');
         if (toggleBtn) {
-            toggleBtn.addEventListener('click', toggleLayerControl);
+            toggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent event from bubbling to h3
+                toggleLayerControl();
+            });
             toggleBtn.addEventListener('touchend', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 toggleLayerControl();
             });
         }
@@ -602,7 +606,7 @@
         const header = document.querySelector('.layer-control h3');
         if (header) {
             header.addEventListener('click', function(e) {
-                // Only toggle if clicking on h3 itself, not the button
+                // Only toggle if clicking on h3 itself or the span, not the button
                 if (e.target === header || e.target.tagName === 'SPAN') {
                     toggleLayerControl();
                 }
