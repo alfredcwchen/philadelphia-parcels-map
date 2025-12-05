@@ -13,7 +13,7 @@ const PORT = 3000;
 app.use(cors());
 
 // Serve PMTiles
-const TILES_DIR = path.join(__dirname, '..', 'geoJSON', 'HKGIS');
+const TILES_DIR = path.join(__dirname, 'pmtiles');
 
 // Initialize PMTiles sources
 const sources = {};

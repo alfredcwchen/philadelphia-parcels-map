@@ -15,6 +15,9 @@ geoJSON/
 *.json
 !tile-server/package*.json
 
+# Allow PMTiles in tile-server directory
+!tile-server/pmtiles/*.pmtiles
+
 # Ignore other HTML files (keep only index.html for deployment)
 mapbox_retool_*.html
 !index.html
