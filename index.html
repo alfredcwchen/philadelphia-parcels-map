@@ -1859,7 +1859,18 @@
                 const bcParcelsLayer = map.getLayer('bc-parcels-wms-layer');
                 const bcParcelsVisible = bcParcelsLayer && map.getLayoutProperty('bc-parcels-wms-layer', 'visibility') !== 'none';
                 
-                if (bcParcelsVisible) {
+                // Only query BC WMS if layer is visible AND click is within BC bounds
+                const bcBounds = {
+                    west: -139.06,
+                    east: -114.03,
+                    south: 48.30,
+                    north: 60.00
+                };
+                
+                const isInBC = lng >= bcBounds.west && lng <= bcBounds.east && 
+                               lat >= bcBounds.south && lat <= bcBounds.north;
+                
+                if (bcParcelsVisible && isInBC) {
                     queryBCWMS();
                     return;
                 }
