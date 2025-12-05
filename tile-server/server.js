@@ -139,7 +139,7 @@ app.get('/:source/:z/:x/:y.pbf', async (req, res) => {
         }
 
         res.setHeader('Content-Type', 'application/x-protobuf');
-        res.setHeader('Content-Encoding', 'gzip');
+        // Don't set Content-Encoding - Mapbox GL JS will handle gzip decompression
         res.setHeader('Cache-Control', 'public, max-age=86400');
         res.send(Buffer.from(tile.data));
     } catch (error) {
