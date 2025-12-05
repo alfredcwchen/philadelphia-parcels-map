@@ -1,9 +1,10 @@
 {
   "name": "hk-pmtiles-server",
   "version": "1.0.0",
-  "description": "Simple PMTiles tile server for Hong Kong parcels and buildings",
+  "description": "PMTiles tile server for parcels and buildings",
   "main": "server.js",
   "scripts": {
+    "postinstall": "./fetch-lfs-files.sh || echo 'LFS fetch skipped'",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
