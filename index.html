@@ -1215,7 +1215,7 @@
         if (!map.getSource('hk-parcels-geojson')) {
             map.addSource('hk-parcels-geojson', {
                 type: 'vector',
-                tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf?v=3'],
+                tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/LandParcel_Lot_HK/{z}/{x}/{y}.pbf'],
                 minzoom: 13,
                 maxzoom: 16,
                 buffer: 0,
@@ -1274,8 +1274,8 @@
         if (!map.getSource('hk-buildings-geojson')) {
             map.addSource('hk-buildings-geojson', {
                 type: 'vector',
-                tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/buildings/{z}/{x}/{y}.pbf?v=3'],
-                minzoom: 10,
+                tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/Building_HK/{z}/{x}/{y}.pbf'],
+                minzoom: 13,
                 maxzoom: 16
             });
         }
@@ -1467,11 +1467,12 @@
         // Hong Kong Land Parcels - Vector Tiles from PMTiles server
         map.addSource('hk-parcels-geojson', {
             type: 'vector',
-            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf?v=3'],
-            minzoom: 10,
+            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/LandParcel_Lot_HK/{z}/{x}/{y}.pbf'],
+            minzoom: 13,
             maxzoom: 16,
             bounds: [113.8, 22.1, 114.5, 22.6], // Hong Kong bounds
-            scheme: 'xyz'
+            buffer: 0,
+            tolerance: 0.375
         });
 
         map.addLayer({
@@ -1538,8 +1539,8 @@
         // Hong Kong Buildings - Vector Tiles from PMTiles server
         map.addSource('hk-buildings-geojson', {
             type: 'vector',
-            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/buildings/{z}/{x}/{y}.pbf?v=3'],
-            minzoom: 10,
+            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/Building_HK/{z}/{x}/{y}.pbf'],
+            minzoom: 13,
             maxzoom: 16
         });
 
