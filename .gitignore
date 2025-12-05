@@ -35,3 +35,4 @@ index-dev.html
 # Ignore local deployment guide (contains sensitive info)
 Deploy2DigitalOcean.mdtile-server/node_modules/
 node_modules/
+index-local.html
