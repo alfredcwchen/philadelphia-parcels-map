@@ -554,6 +554,8 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             width: 300px;
+            display: none; /* Hidden by default, shown when in Hong Kong */
+            transition: opacity 0.3s ease;
         }
         
         .custom-geocoder-input {
@@ -853,12 +855,51 @@
     map.addControl(geocoder, 'top-right');
     
     // Custom Google Geocoder Implementation
+    const customGeocoderDiv = document.querySelector('.custom-geocoder');
     const customSearchInput = document.getElementById('custom-search-input');
     const customSearchResults = document.getElementById('custom-search-results');
     const customSearchLoading = document.getElementById('custom-search-loading');
     const customSearchClear = document.getElementById('custom-search-clear');
     
     let searchTimeout;
+    
+    // Hong Kong bounds for showing Google geocoder
+    const hongKongBounds = {
+        west: 113.8,
+        east: 114.5,
+        south: 22.1,
+        north: 22.6
+    };
+    
+    // Function to check if map is viewing Hong Kong region
+    function isViewingHongKong() {
+        const center = map.getCenter();
+        return center.lng >= hongKongBounds.west && 
+               center.lng <= hongKongBounds.east && 
+               center.lat >= hongKongBounds.south && 
+               center.lat <= hongKongBounds.north;
+    }
+    
+    // Show/hide Google geocoder based on location
+    function updateGoogleGeocoderVisibility() {
+        if (isViewingHongKong()) {
+            customGeocoderDiv.style.display = 'block';
+        } else {
+            customGeocoderDiv.style.display = 'none';
+            // Clear search when leaving Hong Kong
+            if (customSearchInput.value) {
+                customSearchInput.value = '';
+                customSearchResults.style.display = 'none';
+                customSearchClear.style.display = 'none';
+            }
+        }
+    }
+    
+    // Update visibility on map move
+    map.on('moveend', updateGoogleGeocoderVisibility);
+    
+    // Initial check
+    updateGoogleGeocoderVisibility();
     
     // Show/hide clear button
     customSearchInput.addEventListener('input', function() {
