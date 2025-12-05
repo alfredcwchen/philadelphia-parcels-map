@@ -718,45 +718,7 @@
         countries: 'us,ca,cn',
         language: 'en',
         types: 'address,place,locality,neighborhood,poi,region',
-        limit: 5,
-        // Use Google Geocoding API for better Hong Kong coverage
-        externalGeocoder: function(query, features) {
-            // If Google API key is not configured, just return Mapbox features
-            if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === '' || GOOGLE_MAPS_API_KEY === '{{GOOGLE_MAPS_API_KEY}}') {
-                return features;
-            }
-            
-            // Call Google Geocoding API
-            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}`;
-            
-            return fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'OK' && data.results) {
-                        // Convert Google results to Mapbox format and merge with Mapbox results
-                        const googleResults = data.results.slice(0, 5).map(result => ({
-                            place_name: result.formatted_address,
-                            center: [
-                                result.geometry.location.lng,
-                                result.geometry.location.lat
-                            ],
-                            place_type: ['place'],
-                            properties: {
-                                source: 'Google'
-                            },
-                            text: result.address_components[0]?.long_name || query
-                        }));
-                        
-                        // Return Google results first, then Mapbox results
-                        return [...googleResults, ...features];
-                    }
-                    return features;
-                })
-                .catch(error => {
-                    console.error('Google Geocoding API error:', error);
-                    return features; // Fallback to Mapbox results on error
-                });
-        }
+        limit: 10
     });
     
     map.addControl(geocoder, 'top-right');
