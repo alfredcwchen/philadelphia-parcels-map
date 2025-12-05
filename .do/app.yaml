@@ -15,6 +15,9 @@ services:
   routes:
   - path: /
   envs:
-  - key: MAPBOX_TOKEN
+  - key: MAPBOX_ACCESS_TOKEN
+    scope: BUILD_TIME
+    type: SECRET
+  - key: GOOGLE_MAPS_API_KEY
     scope: BUILD_TIME
     type: SECRET
