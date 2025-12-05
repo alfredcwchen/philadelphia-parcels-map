@@ -804,6 +804,101 @@
                 labelLayerId
             );
         }
+
+        // Philadelphia Parcels WMS
+        map.addSource('philly-parcels-wms', {
+            'type': 'raster',
+            'tiles': [
+                'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
+                'SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=16&STYLES=&FORMAT=image/png' +
+                '&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&TRANSPARENT=true'
+            ],
+            'tileSize': 256,
+            'attribution': 'Philadelphia Parcels WMS',
+            'queryable': true
+        });
+
+        map.addLayer({
+            'id': 'philly-parcels-wms-layer',
+            'type': 'raster',
+            'source': 'philly-parcels-wms',
+            'paint': {
+                'raster-opacity': 0.6
+            },
+            'minzoom': MAP_CONFIG.MIN_ZOOM_FOR_PARCELS
+        });
+
+        // Hong Kong Land Parcels - Vector Tiles from PMTiles server
+        map.addSource('hk-parcels-geojson', {
+            type: 'vector',
+            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf?v=3'],
+            minzoom: 10,
+            maxzoom: 16
+        });
+
+        map.addLayer({
+            'id': 'hk-parcels-fill',
+            'type': 'fill',
+            'source': 'hk-parcels-geojson',
+            'source-layer': 'land_parcels',
+            'paint': {
+                'fill-color': '#ff6600',
+                'fill-opacity': 0.5
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+
+        map.addLayer({
+            'id': 'hk-parcels-outline',
+            'type': 'line',
+            'source': 'hk-parcels-geojson',
+            'source-layer': 'land_parcels',
+            'paint': {
+                'line-color': '#ff0000',
+                'line-width': 1
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+
+        // Hong Kong Buildings - Vector Tiles from PMTiles server
+        map.addSource('hk-buildings-geojson', {
+            type: 'vector',
+            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/buildings/{z}/{x}/{y}.pbf?v=3'],
+            minzoom: 10,
+            maxzoom: 16
+        });
+
+        map.addLayer({
+            'id': 'hk-buildings-fill',
+            'type': 'fill',
+            'source': 'hk-buildings-geojson',
+            'source-layer': 'buildings',
+            'paint': {
+                'fill-color': '#3498db',
+                'fill-opacity': 0.6
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+
+        map.addLayer({
+            'id': 'hk-buildings-outline',
+            'type': 'line',
+            'source': 'hk-buildings-geojson',
+            'source-layer': 'buildings',
+            'paint': {
+                'line-color': '#2c3e50',
+                'line-width': 1
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
     });
 
     // Property grouping configuration
@@ -1098,105 +1193,8 @@
     // Race condition protection
     let isClickProcessing = false;
     
-    map.on('load', () => {
-
-        // Philadelphia Parcels WMS
-        map.addSource('philly-parcels-wms', {
-        'type': 'raster',
-        'tiles': [
-            'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
-            'SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=16&STYLES=&FORMAT=image/png' +
-            '&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&TRANSPARENT=true'
-        ],
-        'tileSize': 256,
-        'attribution': 'Philadelphia Parcels WMS',
-        'queryable': true
-        });
-
-        map.addLayer({
-        'id': 'philly-parcels-wms-layer',
-        'type': 'raster',
-        'source': 'philly-parcels-wms',
-        'paint': {
-            'raster-opacity': 0.6
-        },
-        'minzoom': MAP_CONFIG.MIN_ZOOM_FOR_PARCELS
-        });
-
-        // Hong Kong Land Parcels - Vector Tiles from PMTiles server
-        map.addSource('hk-parcels-geojson', {
-            type: 'vector',
-            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf?v=3'],
-            minzoom: 10,
-            maxzoom: 16
-        });
-
-        map.addLayer({
-            'id': 'hk-parcels-fill',
-            'type': 'fill',
-            'source': 'hk-parcels-geojson',
-            'source-layer': 'land_parcels',
-            'paint': {
-                'fill-color': '#ff6600',
-                'fill-opacity': 0.5
-            },
-            'layout': {
-                'visibility': 'none'
-            }
-        });
-
-        map.addLayer({
-            'id': 'hk-parcels-outline',
-            'type': 'line',
-            'source': 'hk-parcels-geojson',
-            'source-layer': 'land_parcels',
-            'paint': {
-                'line-color': '#ff0000',
-                'line-width': 1
-            },
-            'layout': {
-                'visibility': 'none'
-            }
-        });
-
-        // Hong Kong Buildings - Vector Tiles from PMTiles server
-        map.addSource('hk-buildings-geojson', {
-            type: 'vector',
-            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/buildings/{z}/{x}/{y}.pbf?v=3'],
-            minzoom: 10,
-            maxzoom: 16
-        });
-
-        map.addLayer({
-            'id': 'hk-buildings-fill',
-            'type': 'fill',
-            'source': 'hk-buildings-geojson',
-            'source-layer': 'buildings',
-            'paint': {
-                'fill-color': '#3498db',
-                'fill-opacity': 0.6
-            },
-            'layout': {
-                'visibility': 'none'
-            }
-        });
-
-        map.addLayer({
-            'id': 'hk-buildings-outline',
-            'type': 'line',
-            'source': 'hk-buildings-geojson',
-            'source-layer': 'buildings',
-            'paint': {
-                'line-color': '#2c3e50',
-                'line-width': 1
-            },
-            'layout': {
-                'visibility': 'none'
-            }
-        });
-
-        // Add click event for parcels
-        map.on('click', (e) => {
+    // Add click event for parcels
+    map.on('click', (e) => {
             // Only show popups when parcels are visible (zoom level check)
             if (map.getZoom() >= MAP_CONFIG.MIN_ZOOM_FOR_PARCELS) {
                 // Prevent race conditions from multiple rapid clicks
