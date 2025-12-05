@@ -32,12 +32,16 @@ class FileSystemSource {
                 const buffer = Buffer.alloc(length);
                 const bytesRead = fs.readSync(fd, buffer, 0, length, offset);
                 fs.closeSync(fd);
-                // Create a proper Uint8Array from the buffer data
-                const uint8 = new Uint8Array(bytesRead);
+                
+                // Create a true ArrayBuffer and copy data into it
+                const arrayBuffer = new ArrayBuffer(bytesRead);
+                const uint8Array = new Uint8Array(arrayBuffer);
                 for (let i = 0; i < bytesRead; i++) {
-                    uint8[i] = buffer[i];
+                    uint8Array[i] = buffer[i];
                 }
-                resolve(uint8);
+                
+                // Return RangeResponse object with data as ArrayBuffer
+                resolve({ data: arrayBuffer });
             } catch (error) {
                 fs.closeSync(fd);
                 reject(error);
