@@ -210,6 +210,45 @@
             border-radius: 8px !important;
         }
         
+        /* Mobile popup optimization */
+        @media (max-width: 768px) {
+            .mapboxgl-popup-content {
+                width: calc(100vw - 20px) !important;
+                min-width: calc(100vw - 20px) !important;
+                max-width: calc(100vw - 20px) !important;
+            }
+            
+            .popup-container {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            
+            .popup-container.compact {
+                max-height: 180px;
+            }
+            
+            .popup-container.compact .scrollable-content {
+                max-height: 100px;
+            }
+            
+            .popup-container.compact .property-group:not(:first-child) {
+                display: none;
+            }
+            
+            .popup-container.compact .group-content {
+                max-height: 60px;
+                overflow: hidden;
+            }
+            
+            .property-table {
+                width: 100% !important;
+            }
+            
+            .group-table {
+                width: 100% !important;
+            }
+        }
+        
         .mapboxgl-popup-tip {
             border-top-color: #ffffff !important;
             border-bottom-color: #ffffff !important;
@@ -329,6 +368,31 @@
             background: linear-gradient(135deg, #2980b9, #1f5f8b);
             transform: translateY(-1px);
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .popup-expand-btn {
+            display: none;
+            width: 100%;
+            padding: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 8px;
+            text-align: center;
+        }
+        
+        .popup-expand-btn:active {
+            background: #2980b9;
+        }
+        
+        @media (max-width: 768px) {
+            .popup-expand-btn {
+                display: block;
+            }
         }
         
         .scrollable-content {
@@ -1934,6 +1998,22 @@
             icon.innerHTML = '▶';
         }
     };
+    
+    // Function to toggle popup expand/collapse on mobile
+    window.togglePopupExpand = function() {
+        const container = document.getElementById('popup-main');
+        const btn = document.getElementById('popup-expand-btn');
+        
+        if (!container || !btn) return;
+        
+        if (container.classList.contains('compact')) {
+            container.classList.remove('compact');
+            btn.innerHTML = '▲ Show Less';
+        } else {
+            container.classList.add('compact');
+            btn.innerHTML = '▼ Show More Details';
+        }
+    };
 
     // Function to create truncated text with tooltip
     function createTruncatedContent(text, maxLength = 10) {
@@ -2066,8 +2146,11 @@
         // Group properties into categories
         const groupedProps = groupProperties(feature);
         
+        // Detect if mobile
+        const isMobile = window.innerWidth <= 768;
+        
         // Create detailed popup content with collapsible groups
-        let popupContent = '<div class="popup-container">';
+        let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
         popupContent += '<div class="popup-title">Selected Parcel Details</div>';
         popupContent += '<div class="scrollable-content">';
         
@@ -2095,6 +2178,12 @@
         }
         
         popupContent += '</div>';
+        
+        // Add expand/collapse button for mobile
+        if (isMobile) {
+            popupContent += '<button onclick="togglePopupExpand()" class="popup-expand-btn" id="popup-expand-btn">▼ Show More Details</button>';
+        }
+        
         popupContent += '<button onclick="showFeatureSelection()" class="popup-button">← Back to Selection</button>';
         popupContent += '</div>';
         
@@ -2120,8 +2209,10 @@
             return;
         }
         
+        const isMobile = window.innerWidth <= 768;
+        
         // Recreate selection popup with professional styling
-        let popupContent = '<div class="popup-container">';
+        let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
         popupContent += `<div class="popup-title">Multiple Parcels Found (${features.length})</div>`;
         popupContent += '<div class="scrollable-content">';
         
@@ -2136,7 +2227,14 @@
             popupContent += '</div>';
         });
         
-        popupContent += '</div></div>';
+        popupContent += '</div>';
+        
+        // Add expand button for mobile
+        if (isMobile) {
+            popupContent += '<button onclick="togglePopupExpand()" class="popup-expand-btn" id="popup-expand-btn">▼ Show All</button>';
+        }
+        
+        popupContent += '</div>';
         
         // Close current popup and show selection one
         const popups = document.getElementsByClassName('mapboxgl-popup');
