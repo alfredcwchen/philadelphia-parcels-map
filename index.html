@@ -712,8 +712,11 @@
             longitude: -75.163471,
             latitude: 39.952583
         },
-        bbox: [-139.0, 22.0, -74.0, 60.0], // Limit to our coverage areas
-        countries: 'us,ca,hk' // Philadelphia, Seattle, BC, Hong Kong
+        // Remove bbox restriction to allow worldwide search
+        countries: 'us,ca,cn', // US, Canada, China (HK is part of CN in geocoding)
+        language: 'en', // English results
+        types: 'address,place,locality,neighborhood,poi', // Include more types
+        limit: 10 // Show more results
     });
     
     map.addControl(geocoder, 'top-right');
