@@ -1781,6 +1781,40 @@
                 
                 console.log('Click details:', { lng, lat, zoom: map.getZoom() });
                 
+                // Define geographic bounds for each region
+                const regionBounds = {
+                    hongKong: {
+                        west: 113.8,
+                        east: 114.5,
+                        south: 22.1,
+                        north: 22.6
+                    },
+                    seattle: {
+                        west: -122.5,
+                        east: -121.5,
+                        south: 47.0,
+                        north: 47.9
+                    },
+                    bc: {
+                        west: -139.06,
+                        east: -114.03,
+                        south: 48.30,
+                        north: 60.00
+                    },
+                    philadelphia: {
+                        west: -75.28,
+                        east: -74.96,
+                        south: 39.87,
+                        north: 40.14
+                    }
+                };
+                
+                // Helper function to check if point is in bounds
+                const isInBounds = (bounds) => {
+                    return lng >= bounds.west && lng <= bounds.east && 
+                           lat >= bounds.south && lat <= bounds.north;
+                };
+                
                 // Check if HK layers exist and are visible
                 const hkParcelsLayer = map.getLayer('hk-parcels-fill');
                 const hkBuildingsLayer = map.getLayer('hk-buildings-fill');
@@ -1788,7 +1822,8 @@
                 const hkParcelsVisible = hkParcelsLayer && map.getLayoutProperty('hk-parcels-fill', 'visibility') !== 'none';
                 const hkBuildingsVisible = hkBuildingsLayer && map.getLayoutProperty('hk-buildings-fill', 'visibility') !== 'none';
                 
-                if (hkParcelsVisible || hkBuildingsVisible) {
+                // Only query HK layers if click is within HK bounds
+                if ((hkParcelsVisible || hkBuildingsVisible) && isInBounds(regionBounds.hongKong)) {
                     const layers = [];
                     if (hkParcelsVisible) layers.push('hk-parcels-fill');
                     if (hkBuildingsVisible) layers.push('hk-buildings-fill');
@@ -1826,7 +1861,8 @@
                 const seattleParcelsLayer = map.getLayer('seattle-parcels-fill');
                 const seattleParcelsVisible = seattleParcelsLayer && map.getLayoutProperty('seattle-parcels-fill', 'visibility') !== 'none';
                 
-                if (seattleParcelsVisible) {
+                // Only query Seattle layers if click is within Seattle bounds
+                if (seattleParcelsVisible && isInBounds(regionBounds.seattle)) {
                     const features = map.queryRenderedFeatures(e.point, { layers: ['seattle-parcels-fill'] });
                     
                     if (features.length > 0) {
@@ -1860,23 +1896,18 @@
                 const bcParcelsVisible = bcParcelsLayer && map.getLayoutProperty('bc-parcels-wms-layer', 'visibility') !== 'none';
                 
                 // Only query BC WMS if layer is visible AND click is within BC bounds
-                const bcBounds = {
-                    west: -139.06,
-                    east: -114.03,
-                    south: 48.30,
-                    north: 60.00
-                };
-                
-                const isInBC = lng >= bcBounds.west && lng <= bcBounds.east && 
-                               lat >= bcBounds.south && lat <= bcBounds.north;
-                
-                if (bcParcelsVisible && isInBC) {
+                if (bcParcelsVisible && isInBounds(regionBounds.bc)) {
                     queryBCWMS();
                     return;
                 }
                 
-                // Query Philadelphia WMS
-                queryPhiladelphiaWMS();
+                // Query Philadelphia WMS only if click is within Philadelphia bounds
+                if (isInBounds(regionBounds.philadelphia)) {
+                    queryPhiladelphiaWMS();
+                } else {
+                    // Click is outside all known regions
+                    isClickProcessing = false;
+                }
                 
                 function queryPhiladelphiaWMS() {
                     // Use geographic coordinates instead of pixel coordinates
