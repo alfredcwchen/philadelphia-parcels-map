@@ -706,17 +706,44 @@
     const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
-        marker: false, // We'll add custom marker/highlight
-        placeholder: 'Search address or location',
+        marker: false,
+        placeholder: 'Search address (or try "Central HK", "Tsim Sha Tsui")',
         proximity: {
             longitude: -75.163471,
             latitude: 39.952583
         },
-        // Remove bbox restriction to allow worldwide search
-        countries: 'us,ca,cn', // US, Canada, China (HK is part of CN in geocoding)
-        language: 'en', // English results
-        types: 'address,place,locality,neighborhood,poi', // Include more types
-        limit: 10 // Show more results
+        countries: 'us,ca,cn',
+        language: 'en',
+        types: 'address,place,locality,neighborhood,poi,region',
+        limit: 10,
+        // Add custom local geocoder for Hong Kong
+        localGeocoder: function(query) {
+            const hkPlaces = [
+                { place_name: 'Central, Hong Kong', center: [114.1577, 22.2819], place_type: ['place'] },
+                { place_name: 'Tsim Sha Tsui, Hong Kong', center: [114.1722, 22.2978], place_type: ['place'] },
+                { place_name: 'Causeway Bay, Hong Kong', center: [114.1850, 22.2799], place_type: ['place'] },
+                { place_name: 'Mong Kok, Hong Kong', center: [114.1697, 22.3193], place_type: ['place'] },
+                { place_name: 'Wan Chai, Hong Kong', center: [114.1729, 22.2769], place_type: ['place'] },
+                { place_name: 'Admiralty, Hong Kong', center: [114.1653, 22.2779], place_type: ['place'] },
+                { place_name: 'Quarry Bay, Hong Kong', center: [114.2125, 22.2887], place_type: ['place'] },
+                { place_name: 'Kowloon, Hong Kong', center: [114.1722, 22.3193], place_type: ['place'] },
+                { place_name: 'Hong Kong Island', center: [114.1742, 22.2569], place_type: ['place'] },
+                { place_name: 'Victoria Peak, Hong Kong', center: [114.1489, 22.2721], place_type: ['poi'] },
+                { place_name: 'Hong Kong Convention Centre', center: [114.1723, 22.2836], place_type: ['poi'] },
+                { place_name: 'Sha Tin, Hong Kong', center: [114.1952, 22.3811], place_type: ['place'] }
+            ];
+            
+            const matchingPlaces = [];
+            const lowerQuery = query.toLowerCase();
+            
+            hkPlaces.forEach(place => {
+                if (place.place_name.toLowerCase().includes(lowerQuery)) {
+                    matchingPlaces.push(place);
+                }
+            });
+            
+            return matchingPlaces;
+        }
     });
     
     map.addControl(geocoder, 'top-right');
