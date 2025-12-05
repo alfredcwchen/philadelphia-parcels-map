@@ -1208,9 +1208,12 @@
                 
                 console.log('Click details:', { lng, lat, zoom: map.getZoom() });
                 
-                // Check if HK layers are visible and query them first
-                const hkParcelsVisible = map.getLayoutProperty('hk-parcels-fill', 'visibility') !== 'none';
-                const hkBuildingsVisible = map.getLayoutProperty('hk-buildings-fill', 'visibility') !== 'none';
+                // Check if HK layers exist and are visible
+                const hkParcelsLayer = map.getLayer('hk-parcels-fill');
+                const hkBuildingsLayer = map.getLayer('hk-buildings-fill');
+                
+                const hkParcelsVisible = hkParcelsLayer && map.getLayoutProperty('hk-parcels-fill', 'visibility') !== 'none';
+                const hkBuildingsVisible = hkBuildingsLayer && map.getLayoutProperty('hk-buildings-fill', 'visibility') !== 'none';
                 
                 if (hkParcelsVisible || hkBuildingsVisible) {
                     const layers = [];
