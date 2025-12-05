@@ -1256,16 +1256,26 @@
                     '#ff6600'
                 ],
                 'fill-opacity': [
-                    'case',
-                    ['boolean', ['feature-state', 'highlight'], false],
-                    0.8,
-                    [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        10, 0.3,
-                        14, 0.5,
-                        16, 0.6
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    10, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        0.8,
+                        0.3
+                    ],
+                    14, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        0.8,
+                        0.5
+                    ],
+                    16, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        0.8,
+                        0.6
                     ]
                 ]
             },
@@ -1281,12 +1291,7 @@
             'source': 'hk-parcels-geojson',
             'source-layer': 'land_parcels',
             'paint': {
-                'line-color': [
-                    'case',
-                    ['boolean', ['feature-state', 'highlight'], false],
-                    '#ff0000',
-                    '#ff0000'
-                ],
+                'line-color': '#ff0000',
                 'line-width': [
                     'case',
                     ['boolean', ['feature-state', 'highlight'], false],
@@ -1382,20 +1387,30 @@
                 'fill-color': [
                     'case',
                     ['boolean', ['feature-state', 'highlight'], false],
-                    '#ffff00', // Yellow when highlighted
-                    '#0c5da5'  // Normal blue
+                    '#ffff00',
+                    '#0c5da5'
                 ],
                 'fill-opacity': [
-                    'case',
-                    ['boolean', ['feature-state', 'highlight'], false],
-                    0.8, // More opaque when highlighted
-                    [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        10, 0.3,
-                        14, 0.5,
-                        16, 0.6
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    10, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        0.8,
+                        0.3
+                    ],
+                    14, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        0.8,
+                        0.5
+                    ],
+                    16, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        0.8,
+                        0.6
                     ]
                 ]
             },
@@ -1414,20 +1429,30 @@
                 'line-color': [
                     'case',
                     ['boolean', ['feature-state', 'highlight'], false],
-                    '#ff0000', // Red when highlighted
-                    '#003d7a'  // Normal dark blue
+                    '#ff0000',
+                    '#003d7a'
                 ],
                 'line-width': [
-                    'case',
-                    ['boolean', ['feature-state', 'highlight'], false],
-                    3, // Thicker when highlighted
-                    [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        10, 0.5,
-                        14, 1,
-                        16, 1.5
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    10, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        3,
+                        0.5
+                    ],
+                    14, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        3,
+                        1
+                    ],
+                    16, [
+                        'case',
+                        ['boolean', ['feature-state', 'highlight'], false],
+                        3,
+                        1.5
                     ]
                 ],
                 'line-opacity': [
