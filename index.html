@@ -6,6 +6,8 @@
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css" />
     <style>
         body { margin:0; padding:0; }
         #map { position:absolute; top:0; bottom:0; width:100%; }
@@ -526,6 +528,28 @@
         .group-table td .truncated-text {
             max-width: 180px;
         }
+        
+        /* Geocoder search box customization */
+        .mapboxgl-ctrl-geocoder {
+            min-width: 300px;
+            max-width: 400px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        @media (max-width: 768px) {
+            .mapboxgl-ctrl-geocoder {
+                min-width: 200px;
+                max-width: 90vw;
+            }
+        }
+        
+        /* Highlighted parcel style */
+        .highlighted-parcel {
+            fill: yellow !important;
+            fill-opacity: 0.8 !important;
+            stroke: #ff0000 !important;
+            stroke-width: 3px !important;
+        }
     </style>
 </head>
 <body>
@@ -677,6 +701,136 @@
     // Add viewport optimization on move end
     map.on('moveend', optimizeLayerLoading);
     map.on('zoomend', optimizeLayerLoading);
+    
+    // Add geocoder (address search)
+    const geocoder = new MapboxGeocoder({
+        accessToken: mapboxgl.accessToken,
+        mapboxgl: mapboxgl,
+        marker: false, // We'll add custom marker/highlight
+        placeholder: 'Search address or location',
+        proximity: {
+            longitude: -75.163471,
+            latitude: 39.952583
+        },
+        bbox: [-139.0, 22.0, -74.0, 60.0], // Limit to our coverage areas
+        countries: 'us,ca,hk' // Philadelphia, Seattle, BC, Hong Kong
+    });
+    
+    map.addControl(geocoder, 'top-right');
+    
+    // Store highlighted feature ID
+    let highlightedFeatureId = null;
+    let highlightedLayer = null;
+    
+    // Function to clear previous highlight
+    function clearHighlight() {
+        if (highlightedFeatureId !== null && highlightedLayer) {
+            try {
+                if (map.getLayer(highlightedLayer)) {
+                    map.setFeatureState(
+                        { source: highlightedLayer.includes('seattle') ? 'seattle-parcels-pmtiles' : 
+                                 highlightedLayer.includes('hk-parcels') ? 'hk-parcels-geojson' : 
+                                 'seattle-parcels-pmtiles',
+                          sourceLayer: highlightedLayer.includes('seattle') ? 'seattle_parcels' : 'land_parcels',
+                          id: highlightedFeatureId },
+                        { highlight: false }
+                    );
+                }
+            } catch (e) {
+                console.log('Could not clear highlight:', e);
+            }
+            highlightedFeatureId = null;
+            highlightedLayer = null;
+        }
+    }
+    
+    // Function to highlight parcel at location
+    function highlightParcelAtLocation(lng, lat) {
+        const point = map.project([lng, lat]);
+        
+        // Try to find features at this location
+        const layers = ['seattle-parcels-fill', 'hk-parcels-fill'];
+        
+        for (const layerId of layers) {
+            if (!map.getLayer(layerId)) continue;
+            
+            const visibility = map.getLayoutProperty(layerId, 'visibility');
+            if (visibility === 'none') continue;
+            
+            const features = map.queryRenderedFeatures(point, { layers: [layerId] });
+            
+            if (features.length > 0) {
+                const feature = features[0];
+                
+                // Clear previous highlight
+                clearHighlight();
+                
+                // Set new highlight using feature state
+                highlightedLayer = layerId;
+                highlightedFeatureId = feature.id;
+                
+                try {
+                    const sourceName = layerId.includes('seattle') ? 'seattle-parcels-pmtiles' : 'hk-parcels-geojson';
+                    const sourceLayer = layerId.includes('seattle') ? 'seattle_parcels' : 'land_parcels';
+                    
+                    map.setFeatureState(
+                        { source: sourceName, sourceLayer: sourceLayer, id: feature.id },
+                        { highlight: true }
+                    );
+                } catch (e) {
+                    console.log('Could not highlight feature:', e);
+                }
+                
+                // Show popup with parcel info
+                let popupContent = '<div class="popup-container">';
+                popupContent += `<div class="popup-title">${layerId.includes('seattle') ? 'Seattle' : 'Hong Kong'} Parcel</div>`;
+                popupContent += '<div class="scrollable-content">';
+                popupContent += '<table class="property-table">';
+                
+                for (const [key, value] of Object.entries(feature.properties)) {
+                    if (value !== null && value !== undefined && value !== '') {
+                        popupContent += `<tr><td class="prop-key">${key}</td><td class="prop-value">${value}</td></tr>`;
+                    }
+                }
+                
+                popupContent += '</table></div></div>';
+                
+                new mapboxgl.Popup()
+                    .setLngLat([lng, lat])
+                    .setHTML(popupContent)
+                    .addTo(map);
+                
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    // Handle geocoder result
+    geocoder.on('result', function(e) {
+        const coords = e.result.geometry.coordinates;
+        const lng = coords[0];
+        const lat = coords[1];
+        
+        // Fly to location
+        map.flyTo({
+            center: [lng, lat],
+            zoom: 16,
+            essential: true
+        });
+        
+        // Wait for map to finish moving, then highlight parcel
+        setTimeout(() => {
+            highlightParcelAtLocation(lng, lat);
+        }, 1000);
+    });
+    
+    // Clear highlight when map is clicked elsewhere
+    map.on('click', function(e) {
+        // Clear highlight after a delay to allow new highlights to be set
+        setTimeout(clearHighlight, 100);
+    });
 
     // Add navigation controls (zoom, rotation, pitch, compass)
     map.addControl(new mapboxgl.NavigationControl({
@@ -1095,14 +1249,24 @@
             'source': 'hk-parcels-geojson',
             'source-layer': 'land_parcels',
             'paint': {
-                'fill-color': '#ff6600',
+                'fill-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'highlight'], false],
+                    '#ffff00',
+                    '#ff6600'
+                ],
                 'fill-opacity': [
-                    'interpolate',
-                    ['linear'],
-                    ['zoom'],
-                    10, 0.3,
-                    14, 0.5,
-                    16, 0.6
+                    'case',
+                    ['boolean', ['feature-state', 'highlight'], false],
+                    0.8,
+                    [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        10, 0.3,
+                        14, 0.5,
+                        16, 0.6
+                    ]
                 ]
             },
             'layout': {
@@ -1117,8 +1281,18 @@
             'source': 'hk-parcels-geojson',
             'source-layer': 'land_parcels',
             'paint': {
-                'line-color': '#ff0000',
-                'line-width': 1
+                'line-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'highlight'], false],
+                    '#ff0000',
+                    '#ff0000'
+                ],
+                'line-width': [
+                    'case',
+                    ['boolean', ['feature-state', 'highlight'], false],
+                    3,
+                    1
+                ]
             },
             'layout': {
                 'visibility': 'none'
@@ -1205,20 +1379,30 @@
             'source': 'seattle-parcels-pmtiles',
             'source-layer': 'seattle_parcels',
             'paint': {
-                'fill-color': '#0c5da5',
+                'fill-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'highlight'], false],
+                    '#ffff00', // Yellow when highlighted
+                    '#0c5da5'  // Normal blue
+                ],
                 'fill-opacity': [
-                    'interpolate',
-                    ['linear'],
-                    ['zoom'],
-                    10, 0.3,  // Lower opacity at far zoom for performance
-                    14, 0.5,  // Full opacity when zoomed in
-                    16, 0.6
+                    'case',
+                    ['boolean', ['feature-state', 'highlight'], false],
+                    0.8, // More opaque when highlighted
+                    [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        10, 0.3,
+                        14, 0.5,
+                        16, 0.6
+                    ]
                 ]
             },
             'layout': {
                 'visibility': 'none'
             },
-            'minzoom': 10  // Only render at zoom 10+
+            'minzoom': 10
         });
 
         map.addLayer({
@@ -1227,14 +1411,24 @@
             'source': 'seattle-parcels-pmtiles',
             'source-layer': 'seattle_parcels',
             'paint': {
-                'line-color': '#003d7a',
+                'line-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'highlight'], false],
+                    '#ff0000', // Red when highlighted
+                    '#003d7a'  // Normal dark blue
+                ],
                 'line-width': [
-                    'interpolate',
-                    ['linear'],
-                    ['zoom'],
-                    10, 0.5,  // Thinner lines at far zoom
-                    14, 1,    // Normal at medium zoom
-                    16, 1.5   // Thicker when zoomed in
+                    'case',
+                    ['boolean', ['feature-state', 'highlight'], false],
+                    3, // Thicker when highlighted
+                    [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        10, 0.5,
+                        14, 1,
+                        16, 1.5
+                    ]
                 ],
                 'line-opacity': [
                     'interpolate',
