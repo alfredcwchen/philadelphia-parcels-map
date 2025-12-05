@@ -631,8 +631,116 @@
                 );
             }
 
-            // Re-add custom sources (Hong Kong layers, Philadelphia parcels, etc.)
-            // This will be handled by the existing code below
+            // Re-add Philadelphia Parcels WMS
+            if (!this._map.getSource('philly-parcels-wms')) {
+                this._map.addSource('philly-parcels-wms', {
+                    'type': 'raster',
+                    'tiles': [
+                        'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
+                        'SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=16&STYLES=&FORMAT=image/png' +
+                        '&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&TRANSPARENT=true'
+                    ],
+                    'tileSize': 256,
+                    'attribution': 'Philadelphia Parcels WMS',
+                    'queryable': true
+                });
+            }
+
+            if (!this._map.getLayer('philly-parcels-wms-layer')) {
+                this._map.addLayer({
+                    'id': 'philly-parcels-wms-layer',
+                    'type': 'raster',
+                    'source': 'philly-parcels-wms',
+                    'paint': {
+                        'raster-opacity': 0.6
+                    },
+                    'minzoom': 13
+                });
+            }
+
+            // Re-add Hong Kong Land Parcels
+            if (!this._map.getSource('hk-parcels-geojson')) {
+                this._map.addSource('hk-parcels-geojson', {
+                    type: 'vector',
+                    tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf?v=3'],
+                    minzoom: 10,
+                    maxzoom: 16
+                });
+            }
+
+            if (!this._map.getLayer('hk-parcels-fill')) {
+                this._map.addLayer({
+                    'id': 'hk-parcels-fill',
+                    'type': 'fill',
+                    'source': 'hk-parcels-geojson',
+                    'source-layer': 'land_parcels',
+                    'paint': {
+                        'fill-color': '#ff6600',
+                        'fill-opacity': 0.5
+                    },
+                    'layout': {
+                        'visibility': 'none'
+                    }
+                });
+            }
+
+            if (!this._map.getLayer('hk-parcels-outline')) {
+                this._map.addLayer({
+                    'id': 'hk-parcels-outline',
+                    'type': 'line',
+                    'source': 'hk-parcels-geojson',
+                    'source-layer': 'land_parcels',
+                    'paint': {
+                        'line-color': '#ff0000',
+                        'line-width': 1
+                    },
+                    'layout': {
+                        'visibility': 'none'
+                    }
+                });
+            }
+
+            // Re-add Hong Kong Buildings
+            if (!this._map.getSource('hk-buildings-geojson')) {
+                this._map.addSource('hk-buildings-geojson', {
+                    type: 'vector',
+                    tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/buildings/{z}/{x}/{y}.pbf?v=3'],
+                    minzoom: 10,
+                    maxzoom: 16
+                });
+            }
+
+            if (!this._map.getLayer('hk-buildings-fill')) {
+                this._map.addLayer({
+                    'id': 'hk-buildings-fill',
+                    'type': 'fill',
+                    'source': 'hk-buildings-geojson',
+                    'source-layer': 'buildings',
+                    'paint': {
+                        'fill-color': '#3498db',
+                        'fill-opacity': 0.6
+                    },
+                    'layout': {
+                        'visibility': 'none'
+                    }
+                });
+            }
+
+            if (!this._map.getLayer('hk-buildings-outline')) {
+                this._map.addLayer({
+                    'id': 'hk-buildings-outline',
+                    'type': 'line',
+                    'source': 'hk-buildings-geojson',
+                    'source-layer': 'buildings',
+                    'paint': {
+                        'line-color': '#2c3e50',
+                        'line-width': 1
+                    },
+                    'layout': {
+                        'visibility': 'none'
+                    }
+                });
+            }
         }
 
         onRemove() {
