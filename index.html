@@ -2332,8 +2332,11 @@
                     if (features.length > 0) {
                         const feature = features[0];
                         const layerType = feature.layer.id.includes('parcels') ? 'Land Parcel' : 'Building';
+                        const isMobile = window.innerWidth <= 768;
                         
-                        let popupContent = '<div class="popup-container">';
+                        console.log('HK Mobile detection:', { isMobile, width: window.innerWidth });
+                        
+                        let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
                         popupContent += `<div class="popup-title">Hong Kong ${layerType}</div>`;
                         popupContent += '<div class="scrollable-content">';
                         popupContent += '<table class="property-table">';
@@ -2344,7 +2347,13 @@
                             }
                         }
                         
-                        popupContent += '</table></div></div>';
+                        popupContent += '</table></div>';
+                        
+                        if (isMobile) {
+                            popupContent += '<button onclick="togglePopupExpand()" class="popup-expand-btn" id="popup-expand-btn">▼ Show More Details</button>';
+                        }
+                        
+                        popupContent += '</div>';
                         
                         new mapboxgl.Popup()
                             .setLngLat(e.lngLat)
@@ -2366,8 +2375,11 @@
                     
                     if (features.length > 0) {
                         const feature = features[0];
+                        const isMobile = window.innerWidth <= 768;
                         
-                        let popupContent = '<div class="popup-container">';
+                        console.log('Seattle Mobile detection:', { isMobile, width: window.innerWidth });
+                        
+                        let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
                         popupContent += '<div class="popup-title">Seattle Parcel</div>';
                         popupContent += '<div class="scrollable-content">';
                         popupContent += '<table class="property-table">';
@@ -2377,6 +2389,14 @@
                                 popupContent += `<tr><td class="prop-key">${key}</td><td class="prop-value">${value}</td></tr>`;
                             }
                         }
+                        
+                        popupContent += '</table></div>';
+                        
+                        if (isMobile) {
+                            popupContent += '<button onclick="togglePopupExpand()" class="popup-expand-btn" id="popup-expand-btn">▼ Show More Details</button>';
+                        }
+                        
+                        popupContent += '</div>';
                         
                         popupContent += '</table></div></div>';
                         
@@ -2627,8 +2647,11 @@
                             if (data.features && data.features.length > 0) {
                                 const feature = data.features[0];
                                 const props = feature.properties;
+                                const isMobile = window.innerWidth <= 768;
                                 
-                                let popupContent = '<div class="popup-container">';
+                                console.log('BC Mobile detection:', { isMobile, width: window.innerWidth });
+                                
+                                let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
                                 popupContent += '<div class="popup-title">BC Canada Parcel</div>';
                                 popupContent += '<div class="scrollable-content">';
                                 popupContent += '<table class="property-table">';
@@ -2640,7 +2663,13 @@
                                     }
                                 }
                                 
-                                popupContent += '</table></div></div>';
+                                popupContent += '</table></div>';
+                                
+                                if (isMobile) {
+                                    popupContent += '<button onclick="togglePopupExpand()" class="popup-expand-btn" id="popup-expand-btn">▼ Show More Details</button>';
+                                }
+                                
+                                popupContent += '</div>';
                                 
                                 new mapboxgl.Popup()
                                     .setLngLat(e.lngLat)
