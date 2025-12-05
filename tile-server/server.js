@@ -4,44 +4,45 @@ const express = require('express');
 const cors = require('cors');
 const { PMTiles } = require('pmtiles');
 const path = require('path');
-const fs = require('fs').promises;
-const fsSync = require('fs');
+const fs = require('fs');
 
 const app = express();
 const PORT = 3000;
 
-// Enable CORS for all routes
 app.use(cors());
 
-// Serve PMTiles
 const TILES_DIR = path.join(__dirname, 'pmtiles');
-
-// Initialize PMTiles sources
 const sources = {};
 
-// Custom file source adapter for Node.js
-class NodeFileSource {
+// FileSystemSource that works with Node.js
+class FileSystemSource {
     constructor(filepath) {
         this.filepath = filepath;
-        this.fd = null;
+        this.stat = fs.statSync(filepath);
+    }
+
+    getKey() {
+        return this.filepath;
     }
 
     async getBytes(offset, length) {
-        try {
-            if (!this.fd) {
-                this.fd = await fs.open(this.filepath, 'r');
+        return new Promise((resolve, reject) => {
+            const fd = fs.openSync(this.filepath, 'r');
+            try {
+                const buffer = Buffer.alloc(length);
+                const bytesRead = fs.readSync(fd, buffer, 0, length, offset);
+                fs.closeSync(fd);
+                // Create a proper Uint8Array from the buffer data
+                const uint8 = new Uint8Array(bytesRead);
+                for (let i = 0; i < bytesRead; i++) {
+                    uint8[i] = buffer[i];
+                }
+                resolve(uint8);
+            } catch (error) {
+                fs.closeSync(fd);
+                reject(error);
             }
-            const buffer = Buffer.alloc(length);
-            const { bytesRead } = await this.fd.read(buffer, 0, length, offset);
-            return buffer.slice(0, bytesRead);
-        } catch (error) {
-            console.error('Error reading bytes:', error);
-            throw error;
-        }
-    }
-
-    async getKey() {
-        return this.filepath;
+        });
     }
 }
 
@@ -53,18 +54,24 @@ async function initPMTiles() {
 
     for (const [name, filename] of Object.entries(files)) {
         const filepath = path.join(TILES_DIR, filename);
-        if (fsSync.existsSync(filepath)) {
-            const source = new NodeFileSource(filepath);
-            const pmtiles = new PMTiles(source);
-            sources[name] = pmtiles;
-            console.log(`✓ Loaded ${name}: ${filepath}`);
+        if (fs.existsSync(filepath)) {
+            try {
+                const source = new FileSystemSource(filepath);
+                const pmtiles = new PMTiles(source);
+                // Test that it can read the header
+                await pmtiles.getHeader();
+                sources[name] = pmtiles;
+                console.log(`✓ Loaded ${name}: ${filepath}`);
+            } catch (error) {
+                console.error(`✗ Failed to load ${name}:`, error.message);
+            }
         } else {
             console.error(`✗ File not found: ${filepath}`);
         }
     }
 }
 
-// Serve tile metadata
+// Metadata endpoint
 app.get('/:source/metadata.json', async (req, res) => {
     const { source } = req.params;
     const pmtiles = sources[source];
@@ -91,12 +98,12 @@ app.get('/:source/metadata.json', async (req, res) => {
             vector_layers: metadata?.vector_layers || []
         });
     } catch (error) {
-        console.error('Error getting metadata:', error);
-        res.status(500).json({ error: 'Failed to get metadata' });
+        console.error('Metadata error:', error);
+        res.status(500).json({ error: 'Failed to get metadata', details: error.message });
     }
 });
 
-// Serve tiles
+// Tiles endpoint
 app.get('/:source/:z/:x/:y.pbf', async (req, res) => {
     const { source, z, x, y } = req.params;
     const pmtiles = sources[source];
@@ -113,15 +120,15 @@ app.get('/:source/:z/:x/:y.pbf', async (req, res) => {
         const tile = await pmtiles.getZxy(zNum, xNum, yNum);
         
         if (!tile || !tile.data) {
-            return res.status(204).send(); // No content
+            return res.status(204).send();
         }
 
         res.setHeader('Content-Type', 'application/x-protobuf');
         res.setHeader('Content-Encoding', 'gzip');
-        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+        res.setHeader('Cache-Control', 'public, max-age=86400');
         res.send(Buffer.from(tile.data));
     } catch (error) {
-        console.error('Error serving tile:', error);
+        console.error(`Tile error ${source}/${z}/${x}/${y}:`, error.message);
         res.status(500).send('Error serving tile');
     }
 });
@@ -135,35 +142,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Debug endpoint
-app.get('/debug/:source', async (req, res) => {
-    const { source } = req.params;
-    const pmtiles = sources[source];
-    
-    if (!pmtiles) {
-        return res.status(404).json({ error: 'Source not found', available: Object.keys(sources) });
-    }
-
-    try {
-        const header = await pmtiles.getHeader();
-        res.json({ 
-            success: true,
-            header: {
-                minZoom: header.minZoom,
-                maxZoom: header.maxZoom,
-                bounds: [header.minLon, header.minLat, header.maxLon, header.maxLat]
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ 
-            success: false, 
-            error: error.message,
-            stack: error.stack 
-        });
-    }
-});
-
-// Root endpoint
+// Root
 app.get('/', (req, res) => {
     res.json({
         message: 'PMTiles Tile Server',
@@ -172,15 +151,11 @@ app.get('/', (req, res) => {
             metadata: '/:source/metadata.json',
             tiles: '/:source/{z}/{x}/{y}.pbf',
             health: '/health'
-        },
-        examples: {
-            land_parcels: `/land_parcels/14/13381/7143.pbf`,
-            buildings: `/buildings/14/13381/7143.pbf`
         }
     });
 });
 
-// Start server
+// Start
 initPMTiles().then(() => {
     app.listen(PORT, () => {
         console.log(`\n🚀 PMTiles Tile Server running at http://localhost:${PORT}`);
