@@ -2,7 +2,7 @@
 
 const express = require('express');
 const cors = require('cors');
-const { PMTiles } = require('pmtiles');
+const { PMTiles, FileSource } = require('pmtiles');
 const path = require('path');
 const fs = require('fs');
 
@@ -27,7 +27,8 @@ async function initPMTiles() {
     for (const [name, filename] of Object.entries(files)) {
         const filepath = path.join(TILES_DIR, filename);
         if (fs.existsSync(filepath)) {
-            const pmtiles = new PMTiles(filepath);
+            const source = new FileSource(filepath);
+            const pmtiles = new PMTiles(source);
             sources[name] = pmtiles;
             console.log(`✓ Loaded ${name}: ${filepath}`);
         } else {
