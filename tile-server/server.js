@@ -2,7 +2,7 @@
 
 const express = require('express');
 const cors = require('cors');
-const { PMTiles, FileSource } = require('pmtiles');
+const { PMTiles } = require('pmtiles');
 const path = require('path');
 const fs = require('fs');
 
@@ -18,6 +18,31 @@ const TILES_DIR = path.join(__dirname, 'pmtiles');
 // Initialize PMTiles sources
 const sources = {};
 
+// Custom file source adapter for Node.js
+class NodeFileSource {
+    constructor(filepath) {
+        this.filepath = filepath;
+    }
+
+    async getBytes(offset, length) {
+        return new Promise((resolve, reject) => {
+            fs.open(this.filepath, 'r', (err, fd) => {
+                if (err) return reject(err);
+                const buffer = Buffer.alloc(length);
+                fs.read(fd, buffer, 0, length, offset, (err, bytesRead) => {
+                    fs.close(fd, () => {});
+                    if (err) return reject(err);
+                    resolve(buffer);
+                });
+            });
+        });
+    }
+
+    async getKey() {
+        return this.filepath;
+    }
+}
+
 async function initPMTiles() {
     const files = {
         'land_parcels': 'LandParcel_Lot_HK.pmtiles',
@@ -27,7 +52,7 @@ async function initPMTiles() {
     for (const [name, filename] of Object.entries(files)) {
         const filepath = path.join(TILES_DIR, filename);
         if (fs.existsSync(filepath)) {
-            const source = new FileSource(filepath);
+            const source = new NodeFileSource(filepath);
             const pmtiles = new PMTiles(source);
             sources[name] = pmtiles;
             console.log(`✓ Loaded ${name}: ${filepath}`);
