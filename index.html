@@ -10,11 +10,11 @@
         body { margin:0; padding:0; }
         #map { position:absolute; top:0; bottom:0; width:100%; }
         
-        /* Layer toggle control */
+        /* Combined Control Panel */
         .layer-control {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 10px;
             background: white;
             padding: 12px;
             border-radius: 8px;
@@ -22,6 +22,7 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 13px;
             z-index: 1;
+            min-width: 220px;
             max-width: 90vw;
         }
 
@@ -33,6 +34,44 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+        
+        .control-section {
+            margin-bottom: 12px;
+        }
+        
+        .control-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .section-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .style-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        
+        .style-select:hover {
+            border-color: #3498db;
+        }
+        
+        .style-select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
         }
 
         .toggle-btn {
@@ -54,6 +93,7 @@
                 top: 10px;
                 left: 10px;
                 right: 10px;
+                min-width: auto;
                 max-width: none;
                 padding: 8px 12px;
             }
@@ -444,25 +484,49 @@
 <div id="map"></div>
 <div class="layer-control">
     <h3>
-        <span>Map Layers</span>
-        <button class="toggle-btn" onclick="toggleLayerControl()" aria-label="Toggle layer control">▼</button>
+        <span>Map Controls</span>
+        <button class="toggle-btn" onclick="toggleLayerControl()" aria-label="Toggle control panel">▼</button>
     </h3>
     <div class="layer-content">
-        <div class="layer-toggle">
-            <input type="checkbox" id="philly-toggle" checked>
-            <label for="philly-toggle">Philadelphia Parcels</label>
+        <!-- Map Style Section -->
+        <div class="control-section">
+            <div class="section-label">Map Style</div>
+            <select id="style-select-main" class="style-select">
+                <option value="mapbox://styles/mapbox/streets-v11">Streets</option>
+                <option value="mapbox://styles/mapbox/satellite-streets-v12">Satellite</option>
+                <option value="mapbox://styles/mapbox/light-v11">Light</option>
+                <option value="mapbox://styles/mapbox/dark-v11">Dark</option>
+                <option value="mapbox://styles/mapbox/outdoors-v12">Outdoors</option>
+            </select>
         </div>
-        <div class="layer-toggle">
-            <input type="checkbox" id="hk-parcels-toggle">
-            <label for="hk-parcels-toggle">Hong Kong Parcels</label>
+        
+        <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+        
+        <!-- Layers Section -->
+        <div class="control-section">
+            <div class="section-label">Layers</div>
+            <div class="layer-toggle">
+                <input type="checkbox" id="philly-toggle" checked>
+                <label for="philly-toggle">Philadelphia Parcels</label>
+            </div>
+            <div class="layer-toggle">
+                <input type="checkbox" id="hk-parcels-toggle">
+                <label for="hk-parcels-toggle">Hong Kong Parcels</label>
+            </div>
+            <div class="layer-toggle">
+                <input type="checkbox" id="hk-buildings-toggle">
+                <label for="hk-buildings-toggle">Hong Kong Buildings</label>
+            </div>
         </div>
-        <div class="layer-toggle">
-            <input type="checkbox" id="hk-buildings-toggle">
-            <label for="hk-buildings-toggle">Hong Kong Buildings</label>
+        
+        <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+        
+        <!-- Navigation Section -->
+        <div class="control-section">
+            <div class="section-label">Quick Navigation</div>
+            <button id="goto-philly" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Philadelphia</button>
+            <button id="goto-hk" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #ff6600; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Hong Kong</button>
         </div>
-        <hr style="margin: 10px 0; border-color: #ddd;">
-        <button id="goto-philly" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px;">Go to Philadelphia</button>
-        <button id="goto-hk" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #ff6600; color: white; border: none; border-radius: 4px;">Go to Hong Kong</button>
     </div>
 </div>
 <script>
@@ -543,229 +607,199 @@
     }
     map.addControl(new Toggle3DControl(), 'top-right');
 
-    // Create custom style switcher control
-    class StyleSwitcherControl {
-        onAdd(map) {
-            this._map = map;
-            this._container = document.createElement('div');
-            this._container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
-            this._container.style.width = '120px';
-            this._container.innerHTML = `
-                <select id="style-select" style="
-                    width: 100%;
-                    padding: 6px;
-                    border: none;
-                    background: white;
-                    cursor: pointer;
-                    font-size: 12px;
-                ">
-                    <option value="mapbox://styles/mapbox/streets-v11">Streets</option>
-                    <option value="mapbox://styles/mapbox/satellite-streets-v12">Satellite</option>
-                    <option value="mapbox://styles/mapbox/light-v11">Light</option>
-                    <option value="mapbox://styles/mapbox/dark-v11">Dark</option>
-                    <option value="mapbox://styles/mapbox/outdoors-v12">Outdoors</option>
-                </select>
-            `;
-            this._container.querySelector('#style-select').onchange = (e) => {
-                const style = e.target.value;
-                
-                // Save current visibility state of all layers
-                const layerVisibility = {};
-                ['hk-parcels-fill', 'hk-parcels-outline', 'hk-buildings-fill', 'hk-buildings-outline', 'philly-parcels-wms-layer'].forEach(layerId => {
-                    const layer = this._map.getLayer(layerId);
-                    if (layer) {
-                        layerVisibility[layerId] = this._map.getLayoutProperty(layerId, 'visibility') || 'visible';
+    // Handle style switching from main control panel
+    document.getElementById('style-select-main').onchange = (e) => {
+        const style = e.target.value;
+        
+        // Save current visibility state of all layers
+        const layerVisibility = {};
+        ['hk-parcels-fill', 'hk-parcels-outline', 'hk-buildings-fill', 'hk-buildings-outline', 'philly-parcels-wms-layer'].forEach(layerId => {
+            const layer = map.getLayer(layerId);
+            if (layer) {
+                layerVisibility[layerId] = map.getLayoutProperty(layerId, 'visibility') || 'visible';
+            }
+        });
+        
+        map.setStyle(style);
+        // Re-add custom layers after style loads
+        map.once('style.load', () => {
+            readdCustomLayers();
+            
+            // Restore visibility state
+            Object.keys(layerVisibility).forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', layerVisibility[layerId]);
+                }
+            });
+        });
+    };
+
+    // Function to re-add custom layers after style change
+    function readdCustomLayers() {
+        // Re-add terrain
+        if (!map.getSource('mapbox-dem')) {
+            map.addSource('mapbox-dem', {
+                'type': 'raster-dem',
+                'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+                'tileSize': 512,
+                'maxzoom': 14
+            });
+        }
+        map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
+
+        // Re-add 3D buildings
+        const layers = map.getStyle().layers;
+        const labelLayerId = layers.find(
+            (layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']
+        )?.id;
+
+        if (labelLayerId && !map.getLayer('3d-buildings')) {
+            map.addLayer(
+                {
+                    'id': '3d-buildings',
+                    'source': 'composite',
+                    'source-layer': 'building',
+                    'filter': ['==', 'extrude', 'true'],
+                    'type': 'fill-extrusion',
+                    'minzoom': 15,
+                    'paint': {
+                        'fill-extrusion-color': '#aaa',
+                        'fill-extrusion-height': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            15,
+                            0,
+                            15.05,
+                            ['get', 'height']
+                        ],
+                        'fill-extrusion-base': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            15,
+                            0,
+                            15.05,
+                            ['get', 'min_height']
+                        ],
+                        'fill-extrusion-opacity': 0.6
                     }
-                });
-                
-                this._map.setStyle(style);
-                // Re-add custom layers after style loads
-                this._map.once('style.load', () => {
-                    this.readdCustomLayers();
-                    
-                    // Restore visibility state
-                    Object.keys(layerVisibility).forEach(layerId => {
-                        if (this._map.getLayer(layerId)) {
-                            this._map.setLayoutProperty(layerId, 'visibility', layerVisibility[layerId]);
-                        }
-                    });
-                });
-            };
-            return this._container;
+                },
+                labelLayerId
+            );
         }
 
-        readdCustomLayers() {
-            // Re-add terrain
-            if (!this._map.getSource('mapbox-dem')) {
-                this._map.addSource('mapbox-dem', {
-                    'type': 'raster-dem',
-                    'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
-                    'tileSize': 512,
-                    'maxzoom': 14
-                });
-            }
-            this._map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
-
-            // Re-add 3D buildings
-            const layers = this._map.getStyle().layers;
-            const labelLayerId = layers.find(
-                (layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']
-            )?.id;
-
-            if (labelLayerId && !this._map.getLayer('3d-buildings')) {
-                this._map.addLayer(
-                    {
-                        'id': '3d-buildings',
-                        'source': 'composite',
-                        'source-layer': 'building',
-                        'filter': ['==', 'extrude', 'true'],
-                        'type': 'fill-extrusion',
-                        'minzoom': 15,
-                        'paint': {
-                            'fill-extrusion-color': '#aaa',
-                            'fill-extrusion-height': [
-                                'interpolate',
-                                ['linear'],
-                                ['zoom'],
-                                15,
-                                0,
-                                15.05,
-                                ['get', 'height']
-                            ],
-                            'fill-extrusion-base': [
-                                'interpolate',
-                                ['linear'],
-                                ['zoom'],
-                                15,
-                                0,
-                                15.05,
-                                ['get', 'min_height']
-                            ],
-                            'fill-extrusion-opacity': 0.6
-                        }
-                    },
-                    labelLayerId
-                );
-            }
-
-            // Re-add Philadelphia Parcels WMS
-            if (!this._map.getSource('philly-parcels-wms')) {
-                this._map.addSource('philly-parcels-wms', {
-                    'type': 'raster',
-                    'tiles': [
-                        'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
-                        'SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=16&STYLES=&FORMAT=image/png' +
-                        '&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&TRANSPARENT=true'
-                    ],
-                    'tileSize': 256,
-                    'attribution': 'Philadelphia Parcels WMS',
-                    'queryable': true
-                });
-            }
-
-            if (!this._map.getLayer('philly-parcels-wms-layer')) {
-                this._map.addLayer({
-                    'id': 'philly-parcels-wms-layer',
-                    'type': 'raster',
-                    'source': 'philly-parcels-wms',
-                    'paint': {
-                        'raster-opacity': 0.6
-                    },
-                    'minzoom': 13
-                });
-            }
-
-            // Re-add Hong Kong Land Parcels
-            if (!this._map.getSource('hk-parcels-geojson')) {
-                this._map.addSource('hk-parcels-geojson', {
-                    type: 'vector',
-                    tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf?v=3'],
-                    minzoom: 10,
-                    maxzoom: 16
-                });
-            }
-
-            if (!this._map.getLayer('hk-parcels-fill')) {
-                this._map.addLayer({
-                    'id': 'hk-parcels-fill',
-                    'type': 'fill',
-                    'source': 'hk-parcels-geojson',
-                    'source-layer': 'land_parcels',
-                    'paint': {
-                        'fill-color': '#ff6600',
-                        'fill-opacity': 0.5
-                    },
-                    'layout': {
-                        'visibility': 'none'
-                    }
-                });
-            }
-
-            if (!this._map.getLayer('hk-parcels-outline')) {
-                this._map.addLayer({
-                    'id': 'hk-parcels-outline',
-                    'type': 'line',
-                    'source': 'hk-parcels-geojson',
-                    'source-layer': 'land_parcels',
-                    'paint': {
-                        'line-color': '#ff0000',
-                        'line-width': 1
-                    },
-                    'layout': {
-                        'visibility': 'none'
-                    }
-                });
-            }
-
-            // Re-add Hong Kong Buildings
-            if (!this._map.getSource('hk-buildings-geojson')) {
-                this._map.addSource('hk-buildings-geojson', {
-                    type: 'vector',
-                    tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/buildings/{z}/{x}/{y}.pbf?v=3'],
-                    minzoom: 10,
-                    maxzoom: 16
-                });
-            }
-
-            if (!this._map.getLayer('hk-buildings-fill')) {
-                this._map.addLayer({
-                    'id': 'hk-buildings-fill',
-                    'type': 'fill',
-                    'source': 'hk-buildings-geojson',
-                    'source-layer': 'buildings',
-                    'paint': {
-                        'fill-color': '#3498db',
-                        'fill-opacity': 0.6
-                    },
-                    'layout': {
-                        'visibility': 'none'
-                    }
-                });
-            }
-
-            if (!this._map.getLayer('hk-buildings-outline')) {
-                this._map.addLayer({
-                    'id': 'hk-buildings-outline',
-                    'type': 'line',
-                    'source': 'hk-buildings-geojson',
-                    'source-layer': 'buildings',
-                    'paint': {
-                        'line-color': '#2c3e50',
-                        'line-width': 1
-                    },
-                    'layout': {
-                        'visibility': 'none'
-                    }
-                });
-            }
+        // Re-add Philadelphia Parcels WMS
+        if (!map.getSource('philly-parcels-wms')) {
+            map.addSource('philly-parcels-wms', {
+                'type': 'raster',
+                'tiles': [
+                    'https://mapservices.pasda.psu.edu/server/services/pasda/CityPhilly/MapServer/WMSServer?' +
+                    'SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=16&STYLES=&FORMAT=image/png' +
+                    '&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&TRANSPARENT=true'
+                ],
+                'tileSize': 256,
+                'attribution': 'Philadelphia Parcels WMS',
+                'queryable': true
+            });
         }
 
-        onRemove() {
-            this._container.parentNode.removeChild(this._container);
-            this._map = undefined;
+        if (!map.getLayer('philly-parcels-wms-layer')) {
+            map.addLayer({
+                'id': 'philly-parcels-wms-layer',
+                'type': 'raster',
+                'source': 'philly-parcels-wms',
+                'paint': {
+                    'raster-opacity': 0.6
+                },
+                'minzoom': 13
+            });
+        }
+
+        // Re-add Hong Kong Land Parcels
+        if (!map.getSource('hk-parcels-geojson')) {
+            map.addSource('hk-parcels-geojson', {
+                type: 'vector',
+                tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf?v=3'],
+                minzoom: 10,
+                maxzoom: 16
+            });
+        }
+
+        if (!map.getLayer('hk-parcels-fill')) {
+            map.addLayer({
+                'id': 'hk-parcels-fill',
+                'type': 'fill',
+                'source': 'hk-parcels-geojson',
+                'source-layer': 'land_parcels',
+                'paint': {
+                    'fill-color': '#ff6600',
+                    'fill-opacity': 0.5
+                },
+                'layout': {
+                    'visibility': 'none'
+                }
+            });
+        }
+
+        if (!map.getLayer('hk-parcels-outline')) {
+            map.addLayer({
+                'id': 'hk-parcels-outline',
+                'type': 'line',
+                'source': 'hk-parcels-geojson',
+                'source-layer': 'land_parcels',
+                'paint': {
+                    'line-color': '#ff0000',
+                    'line-width': 1
+                },
+                'layout': {
+                    'visibility': 'none'
+                }
+            });
+        }
+
+        // Re-add Hong Kong Buildings
+        if (!map.getSource('hk-buildings-geojson')) {
+            map.addSource('hk-buildings-geojson', {
+                type: 'vector',
+                tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/buildings/{z}/{x}/{y}.pbf?v=3'],
+                minzoom: 10,
+                maxzoom: 16
+            });
+        }
+
+        if (!map.getLayer('hk-buildings-fill')) {
+            map.addLayer({
+                'id': 'hk-buildings-fill',
+                'type': 'fill',
+                'source': 'hk-buildings-geojson',
+                'source-layer': 'buildings',
+                'paint': {
+                    'fill-color': '#3498db',
+                    'fill-opacity': 0.6
+                },
+                'layout': {
+                    'visibility': 'none'
+                }
+            });
+        }
+
+        if (!map.getLayer('hk-buildings-outline')) {
+            map.addLayer({
+                'id': 'hk-buildings-outline',
+                'type': 'line',
+                'source': 'hk-buildings-geojson',
+                'source-layer': 'buildings',
+                'paint': {
+                    'line-color': '#2c3e50',
+                    'line-width': 1
+                },
+                'layout': {
+                    'visibility': 'none'
+                }
+            });
         }
     }
-    map.addControl(new StyleSwitcherControl(), 'top-left');
 
     // Enable 3D terrain and buildings when map loads
     map.on('load', () => {
