@@ -801,16 +801,19 @@
         'minzoom': MAP_CONFIG.MIN_ZOOM_FOR_PARCELS
         });
 
-        // Hong Kong Land Parcels - GeoJSON
+        // Hong Kong Land Parcels - Vector Tiles from PMTiles server
         map.addSource('hk-parcels-geojson', {
-            type: 'geojson',
-            data: 'geoJSON/HKGIS/LandParcel_Lot_HK_wgs84.geojson'
+            type: 'vector',
+            tiles: ['https://philly-map-3xgv2.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf'],
+            minzoom: 10,
+            maxzoom: 16
         });
 
         map.addLayer({
             'id': 'hk-parcels-fill',
             'type': 'fill',
             'source': 'hk-parcels-geojson',
+            'source-layer': 'land_parcels',
             'paint': {
                 'fill-color': '#ff6600',
                 'fill-opacity': 0.5
@@ -824,6 +827,7 @@
             'id': 'hk-parcels-outline',
             'type': 'line',
             'source': 'hk-parcels-geojson',
+            'source-layer': 'land_parcels',
             'paint': {
                 'line-color': '#ff0000',
                 'line-width': 1
@@ -833,16 +837,19 @@
             }
         });
 
-        // Hong Kong Buildings - GeoJSON
+        // Hong Kong Buildings - Vector Tiles from PMTiles server
         map.addSource('hk-buildings-geojson', {
-            type: 'geojson',
-            data: 'geoJSON/HKGIS/Building_HK_wgs84.geojson'
+            type: 'vector',
+            tiles: ['https://philly-map-3xgv2.ondigitalocean.app/buildings/{z}/{x}/{y}.pbf'],
+            minzoom: 10,
+            maxzoom: 16
         });
 
         map.addLayer({
             'id': 'hk-buildings-fill',
             'type': 'fill',
             'source': 'hk-buildings-geojson',
+            'source-layer': 'buildings',
             'paint': {
                 'fill-color': '#3498db',
                 'fill-opacity': 0.6
@@ -856,6 +863,7 @@
             'id': 'hk-buildings-outline',
             'type': 'line',
             'source': 'hk-buildings-geojson',
+            'source-layer': 'buildings',
             'paint': {
                 'line-color': '#2c3e50',
                 'line-width': 1

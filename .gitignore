@@ -4,12 +4,10 @@
 *~
 .DS_Store
 
-# Ignore large geojson files (except Hong Kong WGS84 data needed for deployment)
+# Ignore large geojson files - now using PMTiles tile server instead
 geojson/
 geoJSON/
 *.geojson
-!geoJSON/HKGIS/Building_HK_wgs84.geojson
-!geoJSON/HKGIS/LandParcel_Lot_HK_wgs84.geojson
 
 # Ignore JSON model files (not needed for this app)
 *.json
@@ -31,3 +29,4 @@ index-dev.html
 
 # Ignore local deployment guide (contains sensitive info)
 Deploy2DigitalOcean.mdtile-server/node_modules/
+node_modules/

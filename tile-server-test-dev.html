@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Hong Kong Parcels - Tile Server Test</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <style>
+        body { margin:0; padding:0; font-family: Arial, sans-serif; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+        
+        .info-box {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            max-width: 300px;
+            z-index: 1;
+        }
+        
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .status-dot.success { background: #27ae60; }
+        .status-dot.loading { background: #f39c12; }
+        .status-dot.error { background: #e74c3c; }
+        
+        .toggle {
+            margin: 10px 0;
+        }
+        
+        .toggle label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="info-box">
+    <h3>Tile Server Test</h3>
+    <div class="status">
+        <div class="status-dot" id="server-status"></div>
+        <span id="server-text">Checking server...</span>
+    </div>
+    
+    <div class="toggle">
+        <label>
+            <input type="checkbox" id="parcels-toggle">
+            <span>Land Parcels (73 MB PMTiles)</span>
+        </label>
+    </div>
+    
+    <div class="toggle">
+        <label>
+            <input type="checkbox" id="buildings-toggle">
+            <span>Buildings (77 MB PMTiles)</span>
+        </label>
+    </div>
+    
+    <button onclick="map.flyTo({center: [114.17, 22.31], zoom: 14})" 
+            style="width: 100%; padding: 8px; margin-top: 10px; cursor: pointer; background: #ff6600; color: white; border: none; border-radius: 4px;">
+        Go to Hong Kong
+    </button>
+</div>
+
+<script>
+    // Replace with your Mapbox token
+    mapboxgl.accessToken = 'pk.eyJ1IjoidGVycmFkb3RzIiwiYSI6ImNsMTNzdGljZDAxMzQzZG93ZXR2c3JrNW8ifQ.IhYvU1tLSWON5qqcQ4zIcg';
+    
+    const TILE_SERVER = 'http://localhost:3000';
+    
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [114.17, 22.31],
+        zoom: 12
+    });
+    
+    // Check tile server health
+    fetch(`${TILE_SERVER}/health`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('server-status').className = 'status-dot success';
+            document.getElementById('server-text').textContent = `Server OK (${data.sources.length} sources)`;
+        })
+        .catch(err => {
+            document.getElementById('server-status').className = 'status-dot error';
+            document.getElementById('server-text').textContent = 'Server offline';
+            console.error('Tile server error:', err);
+        });
+    
+    map.on('load', () => {
+        // Add land parcels source
+        map.addSource('hk-parcels-tiles', {
+            type: 'vector',
+            tiles: [`${TILE_SERVER}/land_parcels/{z}/{x}/{y}.pbf`],
+            minzoom: 10,
+            maxzoom: 16
+        });
+        
+        map.addLayer({
+            'id': 'hk-parcels-fill',
+            'type': 'fill',
+            'source': 'hk-parcels-tiles',
+            'source-layer': 'land_parcels',
+            'paint': {
+                'fill-color': '#ff6600',
+                'fill-opacity': 0.5
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+        
+        map.addLayer({
+            'id': 'hk-parcels-outline',
+            'type': 'line',
+            'source': 'hk-parcels-tiles',
+            'source-layer': 'land_parcels',
+            'paint': {
+                'line-color': '#ff0000',
+                'line-width': 1
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+        
+        // Add buildings source
+        map.addSource('hk-buildings-tiles', {
+            type: 'vector',
+            tiles: [`${TILE_SERVER}/buildings/{z}/{x}/{y}.pbf`],
+            minzoom: 12,
+            maxzoom: 16
+        });
+        
+        map.addLayer({
+            'id': 'hk-buildings-fill',
+            'type': 'fill',
+            'source': 'hk-buildings-tiles',
+            'source-layer': 'buildings',
+            'paint': {
+                'fill-color': '#3498db',
+                'fill-opacity': 0.6
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+        
+        map.addLayer({
+            'id': 'hk-buildings-outline',
+            'type': 'line',
+            'source': 'hk-buildings-tiles',
+            'source-layer': 'buildings',
+            'paint': {
+                'line-color': '#2c3e50',
+                'line-width': 1
+            },
+            'layout': {
+                'visibility': 'none'
+            }
+        });
+        
+        // Click handlers for popups
+        map.on('click', 'hk-parcels-fill', (e) => {
+            const props = e.features[0].properties;
+            let html = '<h3>Land Parcel</h3><table>';
+            for (const [key, value] of Object.entries(props)) {
+                html += `<tr><td><b>${key}</b></td><td>${value}</td></tr>`;
+            }
+            html += '</table>';
+            
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(html)
+                .addTo(map);
+        });
+        
+        map.on('click', 'hk-buildings-fill', (e) => {
+            const props = e.features[0].properties;
+            let html = '<h3>Building</h3><table>';
+            for (const [key, value] of Object.entries(props)) {
+                html += `<tr><td><b>${key}</b></td><td>${value}</td></tr>`;
+            }
+            html += '</table>';
+            
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(html)
+                .addTo(map);
+        });
+        
+        // Change cursor on hover
+        map.on('mouseenter', 'hk-parcels-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'hk-parcels-fill', () => { map.getCanvas().style.cursor = ''; });
+        map.on('mouseenter', 'hk-buildings-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'hk-buildings-fill', () => { map.getCanvas().style.cursor = ''; });
+    });
+    
+    // Layer toggles
+    document.getElementById('parcels-toggle').addEventListener('change', function(e) {
+        const visibility = e.target.checked ? 'visible' : 'none';
+        map.setLayoutProperty('hk-parcels-fill', 'visibility', visibility);
+        map.setLayoutProperty('hk-parcels-outline', 'visibility', visibility);
+    });
+    
+    document.getElementById('buildings-toggle').addEventListener('change', function(e) {
+        const visibility = e.target.checked ? 'visible' : 'none';
+        map.setLayoutProperty('hk-buildings-fill', 'visibility', visibility);
+        map.setLayoutProperty('hk-buildings-outline', 'visibility', visibility);
+    });
+</script>
+</body>
+</html>
