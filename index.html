@@ -913,8 +913,8 @@
                 firstChars: GOOGLE_MAPS_API_KEY ? GOOGLE_MAPS_API_KEY.substring(0, 10) : 'none'
             });
             
-            // Check if Google API key is configured
-            if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === '' || GOOGLE_MAPS_API_KEY === '{{GOOGLE_MAPS_API_KEY}}') {
+            // Check if Google API key is configured (starts with AIza means it's a real Google key)
+            if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === '' || !GOOGLE_MAPS_API_KEY.startsWith('AIza')) {
                 customSearchLoading.style.display = 'none';
                 customSearchResults.innerHTML = '<div style="padding: 12px; color: #999; font-size: 13px;">Google API key not configured. Please add GOOGLE_MAPS_API_KEY to your .env file.</div>';
                 customSearchResults.style.display = 'block';
