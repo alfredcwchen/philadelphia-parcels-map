@@ -1,3 +1,4 @@
 # No longer using Git LFS - switched to PMTiles tile server
 # geoJSON/HKGIS/*.geojson filter=lfs diff=lfs merge=lfs -text
 tile-server/*.pmtiles filter=lfs diff=lfs merge=lfs -text
+tile-server/**/*.pmtiles filter=lfs diff=lfs merge=lfs -text
