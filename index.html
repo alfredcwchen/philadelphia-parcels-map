@@ -520,9 +520,9 @@
 <body>
 <div id="map"></div>
 <div class="layer-control">
-    <h3>
+    <h3 onclick="toggleLayerControl()">
         <span>Map Controls</span>
-        <button class="toggle-btn" id="toggle-control-btn" aria-label="Toggle control panel">▼</button>
+        <button class="toggle-btn" id="toggle-control-btn" onclick="event.stopPropagation(); toggleLayerControl();" aria-label="Toggle control panel">▼</button>
     </h3>
     <div class="layer-content">
         <!-- Map Style Section -->
@@ -567,7 +567,7 @@
     </div>
 </div>
 <script>
-    // Toggle layer control on mobile
+    // Toggle layer control function
     function toggleLayerControl() {
         const control = document.querySelector('.layer-control');
         const btn = document.querySelector('.toggle-btn');
@@ -586,31 +586,6 @@
             // Show arrow on desktop too
             const btn = document.querySelector('.toggle-btn');
             btn.textContent = '▼';
-        }
-        
-        // Add click event listener to toggle button
-        const toggleBtn = document.getElementById('toggle-control-btn');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', function(e) {
-                e.stopPropagation(); // Prevent event from bubbling to h3
-                toggleLayerControl();
-            });
-            toggleBtn.addEventListener('touchend', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleLayerControl();
-            });
-        }
-        
-        // Also make the entire h3 header clickable
-        const header = document.querySelector('.layer-control h3');
-        if (header) {
-            header.addEventListener('click', function(e) {
-                // Only toggle if clicking on h3 itself or the span, not the button
-                if (e.target === header || e.target.tagName === 'SPAN') {
-                    toggleLayerControl();
-                }
-            });
         }
     }
 
