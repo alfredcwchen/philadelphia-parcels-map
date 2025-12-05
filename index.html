@@ -1013,10 +1013,8 @@
             duration: 2000
         });
         
-        // Try to highlight parcel at this location
-        setTimeout(() => {
-            highlightParcelAtLocation([lng, lat]);
-        }, 2500);
+        // Parcel highlighting disabled for performance
+        // User can click on parcel after map loads to see details
     }
     
     // Close results when clicking outside
@@ -1310,8 +1308,10 @@
             map.addSource('hk-parcels-geojson', {
                 type: 'vector',
                 tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/land_parcels/{z}/{x}/{y}.pbf?v=3'],
-                minzoom: 10,
-                maxzoom: 16
+                minzoom: 13,
+                maxzoom: 16,
+                buffer: 0,
+                tolerance: 0.375
             });
         }
 
@@ -1321,15 +1321,15 @@
                 'type': 'fill',
                 'source': 'hk-parcels-geojson',
                 'source-layer': 'land_parcels',
-                'minzoom': 12,
+                'minzoom': 13,
                 'paint': {
                     'fill-color': '#ff6600',
                     'fill-opacity': [
                         'interpolate',
                         ['linear'],
                         ['zoom'],
-                        12, 0.2,
-                        14, 0.5,
+                        13, 0.2,
+                        14, 0.4,
                         16, 0.6
                     ]
                 },
