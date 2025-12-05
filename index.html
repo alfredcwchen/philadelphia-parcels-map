@@ -689,12 +689,25 @@
             }
             
             .mapboxgl-ctrl-geocoder.minimized {
-                width: 44px !important;
-                min-width: 44px !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                height: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                overflow: hidden !important;
             }
             
             .mapboxgl-ctrl-geocoder.minimized input {
                 display: none;
+            }
+            
+            .mapboxgl-ctrl-geocoder.minimized .mapboxgl-ctrl-geocoder--icon {
+                display: none !important;
+            }
+            
+            .mapboxgl-ctrl-geocoder.minimized .mapboxgl-ctrl-geocoder--button {
+                display: none !important;
             }
             
             .layer-control {
@@ -725,7 +738,7 @@
             }
             
             #toggle-mapbox-search {
-                top: 62px;
+                top: 10px;
                 right: 10px;
             }
             
@@ -734,9 +747,9 @@
                 right: 10px;
             }
             
-            /* Move Mapbox navigation controls below search box on mobile */
+            /* Move Mapbox navigation controls below toggle button on mobile */
             .mapboxgl-ctrl-top-right {
-                top: 116px !important;
+                top: 64px !important;
             }
         }
         
