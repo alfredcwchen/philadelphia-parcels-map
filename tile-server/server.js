@@ -4,7 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const { PMTiles } = require('pmtiles');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
+const fsSync = require('fs');
 
 const app = express();
 const PORT = 3000;
@@ -22,20 +23,21 @@ const sources = {};
 class NodeFileSource {
     constructor(filepath) {
         this.filepath = filepath;
+        this.fd = null;
     }
 
     async getBytes(offset, length) {
-        return new Promise((resolve, reject) => {
-            fs.open(this.filepath, 'r', (err, fd) => {
-                if (err) return reject(err);
-                const buffer = Buffer.alloc(length);
-                fs.read(fd, buffer, 0, length, offset, (err, bytesRead) => {
-                    fs.close(fd, () => {});
-                    if (err) return reject(err);
-                    resolve(buffer);
-                });
-            });
-        });
+        try {
+            if (!this.fd) {
+                this.fd = await fs.open(this.filepath, 'r');
+            }
+            const buffer = Buffer.alloc(length);
+            const { bytesRead } = await this.fd.read(buffer, 0, length, offset);
+            return buffer.slice(0, bytesRead);
+        } catch (error) {
+            console.error('Error reading bytes:', error);
+            throw error;
+        }
     }
 
     async getKey() {
@@ -51,7 +53,7 @@ async function initPMTiles() {
 
     for (const [name, filename] of Object.entries(files)) {
         const filepath = path.join(TILES_DIR, filename);
-        if (fs.existsSync(filepath)) {
+        if (fsSync.existsSync(filepath)) {
             const source = new NodeFileSource(filepath);
             const pmtiles = new PMTiles(source);
             sources[name] = pmtiles;
@@ -131,6 +133,34 @@ app.get('/health', (req, res) => {
         sources: Object.keys(sources),
         port: PORT
     });
+});
+
+// Debug endpoint
+app.get('/debug/:source', async (req, res) => {
+    const { source } = req.params;
+    const pmtiles = sources[source];
+    
+    if (!pmtiles) {
+        return res.status(404).json({ error: 'Source not found', available: Object.keys(sources) });
+    }
+
+    try {
+        const header = await pmtiles.getHeader();
+        res.json({ 
+            success: true,
+            header: {
+                minZoom: header.minZoom,
+                maxZoom: header.maxZoom,
+                bounds: [header.minLon, header.minLat, header.maxLon, header.maxLat]
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error.message,
+            stack: error.stack 
+        });
+    }
 });
 
 // Root endpoint
