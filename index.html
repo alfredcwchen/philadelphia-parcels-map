@@ -100,6 +100,12 @@
 
             .toggle-btn {
                 display: block;
+                color: #2c3e50;
+                font-size: 20px;
+                width: 24px;
+                height: 24px;
+                line-height: 20px;
+                text-align: center;
             }
 
             .layer-control.collapsed .layer-content {
@@ -112,20 +118,34 @@
 
             .layer-control h3 {
                 margin: 0;
-                font-size: 13px;
+                font-size: 14px;
+            }
+
+            .control-section {
+                margin-bottom: 10px;
+            }
+
+            .section-label {
+                font-size: 11px;
+                margin-bottom: 6px;
             }
 
             .layer-toggle {
-                margin: 8px 0;
+                margin: 6px 0;
             }
 
             .layer-control hr {
-                margin: 8px 0 !important;
+                margin: 10px 0 !important;
             }
 
             .layer-control button {
                 font-size: 12px !important;
                 padding: 6px !important;
+            }
+            
+            .style-select {
+                font-size: 12px;
+                padding: 6px;
             }
         }
         
@@ -530,6 +550,16 @@
     </div>
 </div>
 <script>
+    // Auto-collapse control panel on mobile devices
+    function initMobileControls() {
+        if (window.innerWidth <= 768) {
+            const control = document.querySelector('.layer-control');
+            const btn = document.querySelector('.toggle-btn');
+            control.classList.add('collapsed');
+            btn.textContent = '▶';
+        }
+    }
+
     // Toggle layer control on mobile
     function toggleLayerControl() {
         const control = document.querySelector('.layer-control');
@@ -537,6 +567,9 @@
         control.classList.toggle('collapsed');
         btn.textContent = control.classList.contains('collapsed') ? '▶' : '▼';
     }
+
+    // Initialize mobile controls on page load
+    window.addEventListener('DOMContentLoaded', initMobileControls);
 
     // Token will be injected during build or loaded from .env for local development
     mapboxgl.accessToken = '{{MAPBOX_ACCESS_TOKEN}}';
