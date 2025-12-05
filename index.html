@@ -1432,6 +1432,15 @@
                     }
                 }
                 
+                // Check if BC Canada layer is visible
+                const bcParcelsLayer = map.getLayer('bc-parcels-wms-layer');
+                const bcParcelsVisible = bcParcelsLayer && map.getLayoutProperty('bc-parcels-wms-layer', 'visibility') !== 'none';
+                
+                if (bcParcelsVisible) {
+                    queryBCWMS();
+                    return;
+                }
+                
                 // Query Philadelphia WMS
                 queryPhiladelphiaWMS();
                 
@@ -1602,6 +1611,98 @@
                 
                 tryFeatureInfo();
                 } // End of queryPhiladelphiaWMS function
+                
+                function queryBCWMS() {
+                    // BC Canada WMS GetFeatureInfo query
+                    const bboxSize = MAP_CONFIG.BBOX_PRECISION;
+                    
+                    // Convert click coordinates to EPSG:3857 for BC WMS
+                    const point = map.project(e.lngLat);
+                    const bounds = map.getBounds();
+                    const sw = map.project(bounds.getSouthWest());
+                    const ne = map.project(bounds.getNorthEast());
+                    
+                    const width = Math.floor(ne.x - sw.x);
+                    const height = Math.floor(sw.y - ne.y);
+                    const x = Math.floor(point.x - sw.x);
+                    const y = Math.floor(point.y - ne.y);
+                    
+                    // Get bounds in EPSG:3857
+                    const swLngLat = bounds.getSouthWest();
+                    const neLngLat = bounds.getNorthEast();
+                    
+                    // Simple conversion to Web Mercator (approximate)
+                    const toWebMercator = (lngLat) => {
+                        const x = lngLat.lng * 20037508.34 / 180;
+                        const y = Math.log(Math.tan((90 + lngLat.lat) * Math.PI / 360)) / (Math.PI / 180);
+                        const yMerc = y * 20037508.34 / 180;
+                        return { x, y: yMerc };
+                    };
+                    
+                    const swMerc = toWebMercator(swLngLat);
+                    const neMerc = toWebMercator(neLngLat);
+                    
+                    const featureInfoUrl = 'https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW/ows?' +
+                        'SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0' +
+                        '&LAYERS=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW' +
+                        '&QUERY_LAYERS=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW' +
+                        '&STYLES=5898&INFO_FORMAT=application/json' +
+                        '&CRS=EPSG:3857&FORMAT=image/png&TRANSPARENT=true' +
+                        `&BBOX=${swMerc.x},${swMerc.y},${neMerc.x},${neMerc.y}` +
+                        `&WIDTH=${width}&HEIGHT=${height}` +
+                        `&I=${x}&J=${y}` +
+                        '&FEATURE_COUNT=10';
+                    
+                    console.log('BC WMS GetFeatureInfo URL:', featureInfoUrl);
+                    
+                    fetch(featureInfoUrl)
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('BC WMS response:', data);
+                            
+                            if (data.features && data.features.length > 0) {
+                                const feature = data.features[0];
+                                const props = feature.properties;
+                                
+                                let popupContent = '<div class="popup-container">';
+                                popupContent += '<div class="popup-title">BC Canada Parcel</div>';
+                                popupContent += '<div class="scrollable-content">';
+                                popupContent += '<table class="property-table">';
+                                
+                                // Display all properties
+                                for (const [key, value] of Object.entries(props)) {
+                                    if (value !== null && value !== undefined && value !== '') {
+                                        popupContent += `<tr><td class="prop-key">${key}</td><td class="prop-value">${value}</td></tr>`;
+                                    }
+                                }
+                                
+                                popupContent += '</table></div></div>';
+                                
+                                new mapboxgl.Popup()
+                                    .setLngLat(e.lngLat)
+                                    .setHTML(popupContent)
+                                    .addTo(map);
+                            } else {
+                                new mapboxgl.Popup()
+                                    .setLngLat(e.lngLat)
+                                    .setHTML('<div class="popup-container"><div class="no-data">No BC parcel data found at this location</div></div>')
+                                    .addTo(map);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('BC WMS Error:', error);
+                            new mapboxgl.Popup()
+                                .setLngLat(e.lngLat)
+                                .setHTML(`<div class="popup-container">
+                                    <div class="popup-title">Error</div>
+                                    <div class="no-data">Error querying BC parcel data: ${error.message}</div>
+                                </div>`)
+                                .addTo(map);
+                        })
+                        .finally(() => {
+                            isClickProcessing = false;
+                        });
+                } // End of queryBCWMS function
             } // End of zoom level check
         }); // End of map click handler
 
