@@ -898,6 +898,10 @@
                 <input type="checkbox" id="seattle-parcels-toggle">
                 <label for="seattle-parcels-toggle">Seattle Parcels</label>
             </div>
+            <div class="layer-toggle">
+                <input type="checkbox" id="toronto-parcels-toggle">
+                <label for="toronto-parcels-toggle">Toronto Parcels</label>
+            </div>
         </div>
         
         <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
@@ -909,6 +913,7 @@
             <button id="goto-hk" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #ff6600; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Hong Kong</button>
             <button id="goto-bc" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #c41e3a; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to BC Canada</button>
             <button id="goto-seattle" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #0c5da5; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Seattle</button>
+            <button id="goto-toronto" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #d4001d; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Toronto</button>
         </div>
     </div>
 </div>
@@ -1620,6 +1625,48 @@
                 }
             });
         }
+        
+        // Re-add Toronto Parcels PMTiles
+        if (!map.getSource('toronto-parcels-pmtiles')) {
+            map.addSource('toronto-parcels-pmtiles', {
+                type: 'vector',
+                tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/Toronto_Parcels/{z}/{x}/{y}.pbf'],
+                minzoom: 10,
+                maxzoom: 16
+            });
+        }
+
+        if (!map.getLayer('toronto-parcels-fill')) {
+            map.addLayer({
+                'id': 'toronto-parcels-fill',
+                'type': 'fill',
+                'source': 'toronto-parcels-pmtiles',
+                'source-layer': 'toronto_parcels',
+                'paint': {
+                    'fill-color': '#d4001d',
+                    'fill-opacity': 0.5
+                },
+                'layout': {
+                    'visibility': 'none'
+                }
+            });
+        }
+
+        if (!map.getLayer('toronto-parcels-outline')) {
+            map.addLayer({
+                'id': 'toronto-parcels-outline',
+                'type': 'line',
+                'source': 'toronto-parcels-pmtiles',
+                'source-layer': 'toronto_parcels',
+                'paint': {
+                    'line-color': '#8b0000',
+                    'line-width': 1
+                },
+                'layout': {
+                    'visibility': 'none'
+                }
+            });
+        }
     }
 
     // Enable 3D terrain and buildings when map loads
@@ -1936,6 +1983,60 @@
                 'visibility': 'none'
             },
             'minzoom': 11  // Only show outlines at zoom 11+ for better performance
+        });
+        
+        // Toronto Parcels PMTiles
+        map.addSource('toronto-parcels-pmtiles', {
+            type: 'vector',
+            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/Toronto_Parcels/{z}/{x}/{y}.pbf'],
+            minzoom: 10,
+            maxzoom: 16,
+            bounds: [-79.64, 43.58, -79.12, 43.86], // Toronto bounds
+            scheme: 'xyz'
+        });
+
+        map.addLayer({
+            'id': 'toronto-parcels-fill',
+            'type': 'fill',
+            'source': 'toronto-parcels-pmtiles',
+            'source-layer': 'toronto_parcels',
+            'paint': {
+                'fill-color': '#d4001d',
+                'fill-opacity': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    10, 0.3,
+                    14, 0.5,
+                    16, 0.6
+                ]
+            },
+            'layout': {
+                'visibility': 'none'
+            },
+            'minzoom': 10
+        });
+
+        map.addLayer({
+            'id': 'toronto-parcels-outline',
+            'type': 'line',
+            'source': 'toronto-parcels-pmtiles',
+            'source-layer': 'toronto_parcels',
+            'paint': {
+                'line-color': '#8b0000',
+                'line-width': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    10, 0.5,
+                    14, 1,
+                    16, 1.5
+                ]
+            },
+            'layout': {
+                'visibility': 'none'
+            },
+            'minzoom': 11
         });
     });
 
@@ -2294,6 +2395,12 @@
                         south: 47.0,
                         north: 47.9
                     },
+                    toronto: {
+                        west: -79.64,
+                        east: -79.12,
+                        south: 43.58,
+                        north: 43.86
+                    },
                     bc: {
                         west: -139.06,
                         east: -114.03,
@@ -2399,6 +2506,49 @@
                         popupContent += '</div>';
                         
                         popupContent += '</table></div></div>';
+                        
+                        new mapboxgl.Popup()
+                            .setLngLat(e.lngLat)
+                            .setHTML(popupContent)
+                            .addTo(map);
+                        
+                        isClickProcessing = false;
+                        return;
+                    }
+                }
+                
+                // Check if Toronto layer is visible
+                const torontoParcelsLayer = map.getLayer('toronto-parcels-fill');
+                const torontoParcelsVisible = torontoParcelsLayer && map.getLayoutProperty('toronto-parcels-fill', 'visibility') !== 'none';
+                
+                // Only query Toronto layers if click is within Toronto bounds
+                if (torontoParcelsVisible && isInBounds(regionBounds.toronto)) {
+                    const features = map.queryRenderedFeatures(e.point, { layers: ['toronto-parcels-fill'] });
+                    
+                    if (features.length > 0) {
+                        const feature = features[0];
+                        const isMobile = window.innerWidth <= 768;
+                        
+                        console.log('Toronto Mobile detection:', { isMobile, width: window.innerWidth });
+                        
+                        let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
+                        popupContent += '<div class="popup-title">Toronto Parcel</div>';
+                        popupContent += '<div class="scrollable-content">';
+                        popupContent += '<table class="property-table">';
+                        
+                        for (const [key, value] of Object.entries(feature.properties)) {
+                            if (value !== null && value !== undefined && value !== '') {
+                                popupContent += `<tr><td class="prop-key">${key}</td><td class="prop-value">${value}</td></tr>`;
+                            }
+                        }
+                        
+                        popupContent += '</table></div>';
+                        
+                        if (isMobile) {
+                            popupContent += '<button onclick="togglePopupExpand()" class="popup-expand-btn" id="popup-expand-btn">▼ Show More Details</button>';
+                        }
+                        
+                        popupContent += '</div>';
                         
                         new mapboxgl.Popup()
                             .setLngLat(e.lngLat)
@@ -2739,6 +2889,14 @@
             map.setLayoutProperty('seattle-parcels-outline', 'visibility', visibility);
         }
     });
+    
+    document.getElementById('toronto-parcels-toggle').addEventListener('change', function(e) {
+        const visibility = e.target.checked ? 'visible' : 'none';
+        if (map.getLayer('toronto-parcels-fill')) {
+            map.setLayoutProperty('toronto-parcels-fill', 'visibility', visibility);
+            map.setLayoutProperty('toronto-parcels-outline', 'visibility', visibility);
+        }
+    });
 
     // Location navigation buttons
     document.getElementById('goto-philly').addEventListener('click', function() {
@@ -2768,6 +2926,14 @@
     document.getElementById('goto-seattle').addEventListener('click', function() {
         map.flyTo({
             center: [-122.3321, 47.6062],
+            zoom: 13,
+            essential: true
+        });
+    });
+    
+    document.getElementById('goto-toronto').addEventListener('click', function() {
+        map.flyTo({
+            center: [-79.3832, 43.6532], // Toronto City Hall
             zoom: 13,
             essential: true
         });
