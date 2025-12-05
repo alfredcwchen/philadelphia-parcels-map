@@ -543,6 +543,120 @@
             }
         }
         
+        /* Custom Google Geocoder */
+        .custom-geocoder {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            width: 300px;
+        }
+        
+        .custom-geocoder-input {
+            width: 100%;
+            padding: 10px 35px 10px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        
+        .custom-geocoder-input:focus {
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+        }
+        
+        .custom-geocoder-clear {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            font-size: 18px;
+            padding: 4px 8px;
+            display: none;
+        }
+        
+        .custom-geocoder-clear:hover {
+            color: #333;
+        }
+        
+        .custom-geocoder-results {
+            max-height: 400px;
+            overflow-y: auto;
+            border-top: 1px solid #eee;
+            display: none;
+        }
+        
+        .custom-geocoder-result {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f5f5f5;
+            transition: background 0.15s;
+        }
+        
+        .custom-geocoder-result:hover {
+            background: #f5f5f5;
+        }
+        
+        .custom-geocoder-result:last-child {
+            border-bottom: none;
+        }
+        
+        .custom-geocoder-result-title {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 2px;
+            font-weight: 500;
+        }
+        
+        .custom-geocoder-result-subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .custom-geocoder-loading {
+            padding: 12px;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+            display: none;
+        }
+        
+        .custom-geocoder-source {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+        
+        .source-google {
+            background: #4285f4;
+            color: white;
+        }
+        
+        .source-mapbox {
+            background: #3bb2d0;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .custom-geocoder {
+                width: calc(100vw - 20px);
+                right: 10px;
+                top: 60px;
+            }
+        }
+        
         /* Highlighted parcel style */
         .highlighted-parcel {
             fill: yellow !important;
@@ -554,6 +668,21 @@
 </head>
 <body>
 <div id="map"></div>
+
+<!-- Custom Google Geocoder -->
+<div class="custom-geocoder">
+    <input 
+        type="text" 
+        class="custom-geocoder-input" 
+        id="custom-search-input"
+        placeholder="Search with Google (Hong Kong, global)" 
+        autocomplete="off"
+    />
+    <button class="custom-geocoder-clear" id="custom-search-clear">×</button>
+    <div class="custom-geocoder-loading" id="custom-search-loading">Searching...</div>
+    <div class="custom-geocoder-results" id="custom-search-results"></div>
+</div>
+
 <div class="layer-control">
     <h3 onclick="toggleLayerControl()">
         <span>Map Controls</span>
@@ -722,6 +851,159 @@
     });
     
     map.addControl(geocoder, 'top-right');
+    
+    // Custom Google Geocoder Implementation
+    const customSearchInput = document.getElementById('custom-search-input');
+    const customSearchResults = document.getElementById('custom-search-results');
+    const customSearchLoading = document.getElementById('custom-search-loading');
+    const customSearchClear = document.getElementById('custom-search-clear');
+    
+    let searchTimeout;
+    let currentSearchMarker = null;
+    
+    // Show/hide clear button
+    customSearchInput.addEventListener('input', function() {
+        customSearchClear.style.display = this.value ? 'block' : 'none';
+    });
+    
+    // Clear button click
+    customSearchClear.addEventListener('click', function() {
+        customSearchInput.value = '';
+        customSearchResults.style.display = 'none';
+        customSearchResults.innerHTML = '';
+        customSearchClear.style.display = 'none';
+        if (currentSearchMarker) {
+            currentSearchMarker.remove();
+            currentSearchMarker = null;
+        }
+    });
+    
+    // Search on input
+    customSearchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        
+        // Clear previous timeout
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 3) {
+            customSearchResults.style.display = 'none';
+            customSearchResults.innerHTML = '';
+            customSearchLoading.style.display = 'none';
+            return;
+        }
+        
+        // Show loading
+        customSearchLoading.style.display = 'block';
+        customSearchResults.style.display = 'none';
+        
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+            performGoogleSearch(query);
+        }, 500);
+    });
+    
+    async function performGoogleSearch(query) {
+        try {
+            // Check if Google API key is configured
+            if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === '' || GOOGLE_MAPS_API_KEY === '{{GOOGLE_MAPS_API_KEY}}') {
+                customSearchLoading.style.display = 'none';
+                customSearchResults.innerHTML = '<div style="padding: 12px; color: #999; font-size: 13px;">Google API key not configured. Please add GOOGLE_MAPS_API_KEY to your .env file.</div>';
+                customSearchResults.style.display = 'block';
+                return;
+            }
+            
+            // Call Google Geocoding API
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            customSearchLoading.style.display = 'none';
+            
+            if (data.status === 'OK' && data.results && data.results.length > 0) {
+                displaySearchResults(data.results);
+            } else if (data.status === 'ZERO_RESULTS') {
+                customSearchResults.innerHTML = '<div style="padding: 12px; color: #999; font-size: 13px;">No results found</div>';
+                customSearchResults.style.display = 'block';
+            } else {
+                customSearchResults.innerHTML = `<div style="padding: 12px; color: #999; font-size: 13px;">Error: ${data.status}</div>`;
+                customSearchResults.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Google Geocoding error:', error);
+            customSearchLoading.style.display = 'none';
+            customSearchResults.innerHTML = '<div style="padding: 12px; color: #999; font-size: 13px;">Search failed. Please try again.</div>';
+            customSearchResults.style.display = 'block';
+        }
+    }
+    
+    function displaySearchResults(results) {
+        customSearchResults.innerHTML = '';
+        
+        results.slice(0, 8).forEach((result, index) => {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'custom-geocoder-result';
+            
+            const title = document.createElement('div');
+            title.className = 'custom-geocoder-result-title';
+            title.textContent = result.formatted_address;
+            
+            const subtitle = document.createElement('div');
+            subtitle.className = 'custom-geocoder-result-subtitle';
+            const types = result.types.slice(0, 2).join(', ');
+            subtitle.innerHTML = `${types} <span class="custom-geocoder-source source-google">Google</span>`;
+            
+            resultDiv.appendChild(title);
+            resultDiv.appendChild(subtitle);
+            
+            resultDiv.addEventListener('click', () => {
+                selectSearchResult(result);
+            });
+            
+            customSearchResults.appendChild(resultDiv);
+        });
+        
+        customSearchResults.style.display = 'block';
+    }
+    
+    function selectSearchResult(result) {
+        const lng = result.geometry.location.lng;
+        const lat = result.geometry.location.lat;
+        
+        // Hide results
+        customSearchResults.style.display = 'none';
+        
+        // Update input
+        customSearchInput.value = result.formatted_address;
+        
+        // Remove previous marker
+        if (currentSearchMarker) {
+            currentSearchMarker.remove();
+        }
+        
+        // Add marker
+        currentSearchMarker = new mapboxgl.Marker({ color: '#4285f4' })
+            .setLngLat([lng, lat])
+            .addTo(map);
+        
+        // Fly to location
+        map.flyTo({
+            center: [lng, lat],
+            zoom: 16,
+            duration: 2000
+        });
+        
+        // Try to highlight parcel at this location
+        setTimeout(() => {
+            highlightParcelAtLocation([lng, lat]);
+        }, 2500);
+    }
+    
+    // Close results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.custom-geocoder')) {
+            customSearchResults.style.display = 'none';
+        }
+    });
     
     // Store highlighted feature ID
     let highlightedFeatureId = null;
