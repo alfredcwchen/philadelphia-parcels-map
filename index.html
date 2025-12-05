@@ -859,7 +859,6 @@
     const customSearchClear = document.getElementById('custom-search-clear');
     
     let searchTimeout;
-    let currentSearchMarker = null;
     
     // Show/hide clear button
     customSearchInput.addEventListener('input', function() {
@@ -872,9 +871,9 @@
         customSearchResults.style.display = 'none';
         customSearchResults.innerHTML = '';
         customSearchClear.style.display = 'none';
-        if (currentSearchMarker) {
-            currentSearchMarker.remove();
-            currentSearchMarker = null;
+        if (searchResultMarker) {
+            searchResultMarker.remove();
+            searchResultMarker = null;
         }
     });
     
@@ -997,12 +996,12 @@
         customSearchInput.value = result.formatted_address;
         
         // Remove previous marker
-        if (currentSearchMarker) {
-            currentSearchMarker.remove();
+        if (searchResultMarker) {
+            searchResultMarker.remove();
         }
         
-        // Add marker
-        currentSearchMarker = new mapboxgl.Marker({ color: '#4285f4' })
+        // Add blue marker (shared with Mapbox geocoder)
+        searchResultMarker = new mapboxgl.Marker({ color: '#4285f4' })
             .setLngLat([lng, lat])
             .addTo(map);
         
@@ -1012,9 +1011,6 @@
             zoom: 16,
             duration: 2000
         });
-        
-        // Parcel highlighting disabled for performance
-        // User can click on parcel after map loads to see details
     }
     
     // Close results when clicking outside
@@ -1024,100 +1020,24 @@
         }
     });
     
-    // Store highlighted feature ID
-    let highlightedFeatureId = null;
-    let highlightedLayer = null;
+    // Shared search result marker for both geocoders
+    let searchResultMarker = null;
     
-    // Function to clear previous highlight
-    function clearHighlight() {
-        if (highlightedFeatureId !== null && highlightedLayer) {
-            try {
-                if (map.getLayer(highlightedLayer)) {
-                    map.setFeatureState(
-                        { source: highlightedLayer.includes('seattle') ? 'seattle-parcels-pmtiles' : 
-                                 highlightedLayer.includes('hk-parcels') ? 'hk-parcels-geojson' : 
-                                 'seattle-parcels-pmtiles',
-                          sourceLayer: highlightedLayer.includes('seattle') ? 'seattle_parcels' : 'land_parcels',
-                          id: highlightedFeatureId },
-                        { highlight: false }
-                    );
-                }
-            } catch (e) {
-                console.log('Could not clear highlight:', e);
-            }
-            highlightedFeatureId = null;
-            highlightedLayer = null;
-        }
-    }
-    
-    // Function to highlight parcel at location
-    function highlightParcelAtLocation(lng, lat) {
-        const point = map.project([lng, lat]);
-        
-        // Try to find features at this location
-        const layers = ['seattle-parcels-fill', 'hk-parcels-fill'];
-        
-        for (const layerId of layers) {
-            if (!map.getLayer(layerId)) continue;
-            
-            const visibility = map.getLayoutProperty(layerId, 'visibility');
-            if (visibility === 'none') continue;
-            
-            const features = map.queryRenderedFeatures(point, { layers: [layerId] });
-            
-            if (features.length > 0) {
-                const feature = features[0];
-                
-                // Clear previous highlight
-                clearHighlight();
-                
-                // Set new highlight using feature state
-                highlightedLayer = layerId;
-                highlightedFeatureId = feature.id;
-                
-                try {
-                    const sourceName = layerId.includes('seattle') ? 'seattle-parcels-pmtiles' : 'hk-parcels-geojson';
-                    const sourceLayer = layerId.includes('seattle') ? 'seattle_parcels' : 'land_parcels';
-                    
-                    map.setFeatureState(
-                        { source: sourceName, sourceLayer: sourceLayer, id: feature.id },
-                        { highlight: true }
-                    );
-                } catch (e) {
-                    console.log('Could not highlight feature:', e);
-                }
-                
-                // Show popup with parcel info
-                let popupContent = '<div class="popup-container">';
-                popupContent += `<div class="popup-title">${layerId.includes('seattle') ? 'Seattle' : 'Hong Kong'} Parcel</div>`;
-                popupContent += '<div class="scrollable-content">';
-                popupContent += '<table class="property-table">';
-                
-                for (const [key, value] of Object.entries(feature.properties)) {
-                    if (value !== null && value !== undefined && value !== '') {
-                        popupContent += `<tr><td class="prop-key">${key}</td><td class="prop-value">${value}</td></tr>`;
-                    }
-                }
-                
-                popupContent += '</table></div></div>';
-                
-                new mapboxgl.Popup()
-                    .setLngLat([lng, lat])
-                    .setHTML(popupContent)
-                    .addTo(map);
-                
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    // Handle geocoder result
+    // Handle Mapbox geocoder result
     geocoder.on('result', function(e) {
         const coords = e.result.geometry.coordinates;
         const lng = coords[0];
         const lat = coords[1];
+        
+        // Remove previous marker
+        if (searchResultMarker) {
+            searchResultMarker.remove();
+        }
+        
+        // Add blue marker
+        searchResultMarker = new mapboxgl.Marker({ color: '#4285f4' })
+            .setLngLat([lng, lat])
+            .addTo(map);
         
         // Fly to location
         map.flyTo({
@@ -1125,20 +1045,8 @@
             zoom: 16,
             essential: true
         });
-        
-        // Wait for map to finish moving, then highlight parcel
-        setTimeout(() => {
-            highlightParcelAtLocation(lng, lat);
-        }, 1000);
     });
-    
-    // Clear highlight when map is clicked elsewhere
-    map.on('click', function(e) {
-        // Clear highlight after a delay to allow new highlights to be set
-        setTimeout(clearHighlight, 100);
-    });
-
-    // Add navigation controls (zoom, rotation, pitch, compass)
+        // Add navigation controls (zoom, rotation, pitch, compass)
     map.addControl(new mapboxgl.NavigationControl({
         visualizePitch: true,
         showCompass: true,
