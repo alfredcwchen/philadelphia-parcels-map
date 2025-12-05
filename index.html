@@ -565,6 +565,10 @@
                 <input type="checkbox" id="hk-buildings-toggle">
                 <label for="hk-buildings-toggle">Hong Kong Buildings</label>
             </div>
+            <div class="layer-toggle">
+                <input type="checkbox" id="bc-parcels-toggle">
+                <label for="bc-parcels-toggle">BC Canada Parcels</label>
+            </div>
         </div>
         
         <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
@@ -574,6 +578,7 @@
             <div class="section-label">Quick Navigation</div>
             <button id="goto-philly" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Philadelphia</button>
             <button id="goto-hk" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #ff6600; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Hong Kong</button>
+            <button id="goto-bc" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #c41e3a; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to BC Canada</button>
         </div>
     </div>
 </div>
@@ -684,7 +689,7 @@
         
         // Save current visibility state of all layers
         const layerVisibility = {};
-        ['hk-parcels-fill', 'hk-parcels-outline', 'hk-buildings-fill', 'hk-buildings-outline', 'philly-parcels-wms-layer'].forEach(layerId => {
+        ['hk-parcels-fill', 'hk-parcels-outline', 'hk-buildings-fill', 'hk-buildings-outline', 'philly-parcels-wms-layer', 'bc-parcels-wms-layer'].forEach(layerId => {
             const layer = map.getLayer(layerId);
             if (layer) {
                 layerVisibility[layerId] = map.getLayoutProperty(layerId, 'visibility') || 'visible';
@@ -870,6 +875,37 @@
                 }
             });
         }
+        
+        // Re-add BC Canada Parcels WMS
+        if (!map.getSource('bc-parcels-wms')) {
+            map.addSource('bc-parcels-wms', {
+                'type': 'raster',
+                'tiles': [
+                    'https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW/ows?' +
+                    'SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW&' +
+                    'STYLES=5898&FORMAT=image/png&TRANSPARENT=true&' +
+                    'CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}'
+                ],
+                'tileSize': 256,
+                'attribution': 'BC ParcelMap',
+                'queryable': true
+            });
+        }
+
+        if (!map.getLayer('bc-parcels-wms-layer')) {
+            map.addLayer({
+                'id': 'bc-parcels-wms-layer',
+                'type': 'raster',
+                'source': 'bc-parcels-wms',
+                'paint': {
+                    'raster-opacity': 0.6
+                },
+                'layout': {
+                    'visibility': 'none'
+                },
+                'minzoom': 10
+            });
+        }
     }
 
     // Enable 3D terrain and buildings when map loads
@@ -1020,6 +1056,33 @@
             'layout': {
                 'visibility': 'none'
             }
+        });
+
+        // BC Canada Parcels WMS
+        map.addSource('bc-parcels-wms', {
+            'type': 'raster',
+            'tiles': [
+                'https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW/ows?' +
+                'SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW&' +
+                'STYLES=5898&FORMAT=image/png&TRANSPARENT=true&' +
+                'CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}'
+            ],
+            'tileSize': 256,
+            'attribution': 'BC ParcelMap',
+            'queryable': true
+        });
+
+        map.addLayer({
+            'id': 'bc-parcels-wms-layer',
+            'type': 'raster',
+            'source': 'bc-parcels-wms',
+            'paint': {
+                'raster-opacity': 0.6
+            },
+            'layout': {
+                'visibility': 'none'
+            },
+            'minzoom': 10
         });
     });
 
@@ -1567,6 +1630,13 @@
         map.setLayoutProperty('hk-buildings-fill', 'visibility', visibility);
         map.setLayoutProperty('hk-buildings-outline', 'visibility', visibility);
     });
+    
+    document.getElementById('bc-parcels-toggle').addEventListener('change', function(e) {
+        const visibility = e.target.checked ? 'visible' : 'none';
+        if (map.getLayer('bc-parcels-wms-layer')) {
+            map.setLayoutProperty('bc-parcels-wms-layer', 'visibility', visibility);
+        }
+    });
 
     // Location navigation buttons
     document.getElementById('goto-philly').addEventListener('click', function() {
@@ -1581,6 +1651,14 @@
         map.flyTo({
             center: [114.17, 22.31],
             zoom: 14,
+            essential: true
+        });
+    });
+    
+    document.getElementById('goto-bc').addEventListener('click', function() {
+        map.flyTo({
+            center: [-123.3656, 48.4284],
+            zoom: 11,
             essential: true
         });
     });
