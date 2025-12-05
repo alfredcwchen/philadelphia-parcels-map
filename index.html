@@ -702,9 +702,8 @@
     map.on('moveend', optimizeLayerLoading);
     map.on('zoomend', optimizeLayerLoading);
     
-    // Configure Google Maps API Key (replace with your actual key)
-    // To get a key: https://console.cloud.google.com/google/maps-apis/credentials
-    const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_API_KEY_HERE';
+    // Google Maps API Key for enhanced geocoding (especially for Hong Kong)
+    const GOOGLE_MAPS_API_KEY = '{{GOOGLE_MAPS_API_KEY}}';
     
     // Add geocoder (address search)
     const geocoder = new MapboxGeocoder({
@@ -723,8 +722,7 @@
         // Use Google Geocoding API for better Hong Kong coverage
         localGeocoder: async function(query) {
             // If Google API key is not configured, return empty
-            if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_API_KEY_HERE') {
-                console.warn('Google Maps API key not configured. Set GOOGLE_MAPS_API_KEY to enable Google geocoding.');
+            if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === '' || GOOGLE_MAPS_API_KEY === '{{GOOGLE_MAPS_API_KEY}}') {
                 return [];
             }
             

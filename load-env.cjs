@@ -33,9 +33,18 @@ if (!envVars.MAPBOX_ACCESS_TOKEN) {
     process.exit(1);
 }
 
-// Read index.html and replace placeholder
-const htmlContent = fs.readFileSync(htmlPath, 'utf8');
-const updatedContent = htmlContent.replace('{{MAPBOX_ACCESS_TOKEN}}', envVars.MAPBOX_ACCESS_TOKEN);
+// Read index.html and replace placeholders
+let htmlContent = fs.readFileSync(htmlPath, 'utf8');
+let updatedContent = htmlContent.replace('{{MAPBOX_ACCESS_TOKEN}}', envVars.MAPBOX_ACCESS_TOKEN);
+
+// Replace Google Maps API key if provided (optional)
+if (envVars.GOOGLE_MAPS_API_KEY) {
+    updatedContent = updatedContent.replace('{{GOOGLE_MAPS_API_KEY}}', envVars.GOOGLE_MAPS_API_KEY);
+    console.log('Google Maps API key configured');
+} else {
+    updatedContent = updatedContent.replace('{{GOOGLE_MAPS_API_KEY}}', '');
+    console.log('Google Maps API key not found (geocoding will use Mapbox only)');
+}
 
 // Write to temp file for local development
 const tempHtmlPath = path.join(__dirname, 'index-dev.html');
