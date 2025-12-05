@@ -38,6 +38,9 @@ GH_LFS_BASE="https://media.githubusercontent.com/media/${REPO}/main/tile-server"
 download_if_needed "Seattle_Parcels.pmtiles" "${GH_LFS_BASE}/Seattle_Parcels.pmtiles" || \
     echo "⚠️  Could not download Seattle_Parcels.pmtiles"
 
+download_if_needed "Toronto_Parcels.pmtiles" "${GH_LFS_BASE}/Toronto_Parcels.pmtiles" || \
+    echo "⚠️  Could not download Toronto_Parcels.pmtiles"
+
 download_if_needed "pmtiles/Building_HK.pmtiles" "${GH_LFS_BASE}/pmtiles/Building_HK.pmtiles" || \
     echo "⚠️  Could not download Building_HK.pmtiles"
 
