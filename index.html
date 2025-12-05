@@ -81,6 +81,13 @@
             cursor: pointer;
             padding: 0;
             display: none;
+            color: #2c3e50;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .toggle-btn:active {
+            opacity: 0.6;
         }
 
         .layer-content {
@@ -505,7 +512,7 @@
 <div class="layer-control">
     <h3>
         <span>Map Controls</span>
-        <button class="toggle-btn" onclick="toggleLayerControl()" aria-label="Toggle control panel">▼</button>
+        <button class="toggle-btn" id="toggle-control-btn" aria-label="Toggle control panel">▼</button>
     </h3>
     <div class="layer-content">
         <!-- Map Style Section -->
@@ -550,16 +557,6 @@
     </div>
 </div>
 <script>
-    // Auto-collapse control panel on mobile devices
-    function initMobileControls() {
-        if (window.innerWidth <= 768) {
-            const control = document.querySelector('.layer-control');
-            const btn = document.querySelector('.toggle-btn');
-            control.classList.add('collapsed');
-            btn.textContent = '▶';
-        }
-    }
-
     // Toggle layer control on mobile
     function toggleLayerControl() {
         const control = document.querySelector('.layer-control');
@@ -568,8 +565,32 @@
         btn.textContent = control.classList.contains('collapsed') ? '▶' : '▼';
     }
 
+    // Auto-collapse control panel on mobile devices
+    function initMobileControls() {
+        if (window.innerWidth <= 768) {
+            const control = document.querySelector('.layer-control');
+            const btn = document.querySelector('.toggle-btn');
+            control.classList.add('collapsed');
+            btn.textContent = '▶';
+        }
+        
+        // Add click event listener to toggle button
+        const toggleBtn = document.getElementById('toggle-control-btn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', toggleLayerControl);
+            toggleBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                toggleLayerControl();
+            });
+        }
+    }
+
     // Initialize mobile controls on page load
-    window.addEventListener('DOMContentLoaded', initMobileControls);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMobileControls);
+    } else {
+        initMobileControls();
+    }
 
     // Token will be injected during build or loaded from .env for local development
     mapboxgl.accessToken = '{{MAPBOX_ACCESS_TOKEN}}';
