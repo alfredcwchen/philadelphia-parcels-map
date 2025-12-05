@@ -224,20 +224,26 @@
             }
             
             .popup-container.compact {
-                max-height: 180px;
+                max-height: 200px !important;
             }
             
             .popup-container.compact .scrollable-content {
-                max-height: 100px;
+                max-height: 80px !important;
+                overflow: hidden !important;
+                flex: none !important;
             }
             
             .popup-container.compact .property-group:not(:first-child) {
-                display: none;
+                display: none !important;
             }
             
             .popup-container.compact .group-content {
-                max-height: 60px;
-                overflow: hidden;
+                max-height: 50px !important;
+                overflow: hidden !important;
+            }
+            
+            .popup-container.compact .group-table tr:nth-child(n+4) {
+                display: none !important;
             }
             
             .property-table {
@@ -373,20 +379,22 @@
         .popup-expand-btn {
             display: none;
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background: #3498db;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            margin-top: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-top: 10px;
             text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         
         .popup-expand-btn:active {
             background: #2980b9;
+            transform: scale(0.98);
         }
         
         @media (max-width: 768px) {
@@ -2148,6 +2156,8 @@
         
         // Detect if mobile
         const isMobile = window.innerWidth <= 768;
+        
+        console.log('Mobile detection:', { isMobile, width: window.innerWidth });
         
         // Create detailed popup content with collapsible groups
         let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
