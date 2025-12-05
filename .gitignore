@@ -8,6 +8,8 @@
 geojson/
 geoJSON/
 *.geojson
+# But allow PMTiles files for tile server
+!geoJSON/HKGIS/*.pmtiles
 
 # Ignore JSON model files (not needed for this app)
 *.json
