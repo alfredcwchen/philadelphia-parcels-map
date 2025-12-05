@@ -481,7 +481,62 @@
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v11',
         center: [-75.163471, 39.952583], // Philadelphia center coordinates
-        zoom: 11
+        zoom: 11,
+        pitch: 0, // Initial pitch (0-85 degrees)
+        bearing: 0, // Initial bearing (0-360 degrees)
+        antialias: true // For smoother 3D rendering
+    });
+
+    // Enable 3D terrain and buildings when map loads
+    map.on('load', () => {
+        // Add 3D terrain
+        map.addSource('mapbox-dem', {
+            'type': 'raster-dem',
+            'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+            'tileSize': 512,
+            'maxzoom': 14
+        });
+        map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
+
+        // Add 3D buildings layer
+        const layers = map.getStyle().layers;
+        const labelLayerId = layers.find(
+            (layer) => layer.type === 'symbol' && layer.layout['text-field']
+        ).id;
+
+        map.addLayer(
+            {
+                'id': '3d-buildings',
+                'source': 'composite',
+                'source-layer': 'building',
+                'filter': ['==', 'extrude', 'true'],
+                'type': 'fill-extrusion',
+                'minzoom': 15,
+                'paint': {
+                    'fill-extrusion-color': '#aaa',
+                    'fill-extrusion-height': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        15,
+                        0,
+                        15.05,
+                        ['get', 'height']
+                    ],
+                    'fill-extrusion-base': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        15,
+                        0,
+                        15.05,
+                        ['get', 'min_height']
+                    ],
+                    'fill-extrusion-opacity': 0.6
+                }
+            },
+            labelLayerId
+        );
     });
 
     // Property grouping configuration
