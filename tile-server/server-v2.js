@@ -9,18 +9,7 @@ const fs = require('fs');
 const app = express();
 const PORT = 3000;
 
-// Enhanced CORS configuration
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'HEAD', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Range'],
-    exposedHeaders: ['Content-Length', 'Content-Type', 'Content-Encoding'],
-    credentials: false,
-    maxAge: 86400
-}));
-
-// Handle OPTIONS requests explicitly
-app.options('*', cors());
+app.use(cors());
 
 const TILES_DIR = path.join(__dirname, 'pmtiles');
 const sources = {};
@@ -43,16 +32,8 @@ class FileSystemSource {
                 const buffer = Buffer.alloc(length);
                 const bytesRead = fs.readSync(fd, buffer, 0, length, offset);
                 fs.closeSync(fd);
-                
-                // Create a true ArrayBuffer and copy data into it
-                const arrayBuffer = new ArrayBuffer(bytesRead);
-                const uint8Array = new Uint8Array(arrayBuffer);
-                for (let i = 0; i < bytesRead; i++) {
-                    uint8Array[i] = buffer[i];
-                }
-                
-                // Return RangeResponse object with data as ArrayBuffer
-                resolve({ data: arrayBuffer });
+                // Use Uint8Array.from() to create proper ArrayBuffer-backed array
+                resolve(Uint8Array.from(buffer.subarray(0, bytesRead)));
             } catch (error) {
                 fs.closeSync(fd);
                 reject(error);
