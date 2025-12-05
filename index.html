@@ -975,8 +975,20 @@
     }
     
     function selectSearchResult(result) {
-        const lng = result.geometry.location.lng;
-        const lat = result.geometry.location.lat;
+        // Parse coordinates - Google API can return lng/lat as properties or direct values
+        const location = result.geometry.location;
+        const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+        const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+        
+        console.log('Selected location:', { lng, lat, result });
+        
+        // Validate coordinates
+        if (isNaN(lng) || isNaN(lat) || lng === undefined || lat === undefined) {
+            console.error('Invalid coordinates:', { lng, lat, location });
+            customSearchResults.innerHTML = '<div style="padding: 12px; color: #f44; font-size: 13px;">Invalid coordinates received from Google</div>';
+            customSearchResults.style.display = 'block';
+            return;
+        }
         
         // Hide results
         customSearchResults.style.display = 'none';
@@ -1309,9 +1321,17 @@
                 'type': 'fill',
                 'source': 'hk-parcels-geojson',
                 'source-layer': 'land_parcels',
+                'minzoom': 12,
                 'paint': {
                     'fill-color': '#ff6600',
-                    'fill-opacity': 0.5
+                    'fill-opacity': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        12, 0.2,
+                        14, 0.5,
+                        16, 0.6
+                    ]
                 },
                 'layout': {
                     'visibility': 'none'
@@ -1325,9 +1345,16 @@
                 'type': 'line',
                 'source': 'hk-parcels-geojson',
                 'source-layer': 'land_parcels',
+                'minzoom': 14,
                 'paint': {
                     'line-color': '#ff0000',
-                    'line-width': 1
+                    'line-width': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        14, 0.5,
+                        16, 1
+                    ]
                 },
                 'layout': {
                     'visibility': 'none'
