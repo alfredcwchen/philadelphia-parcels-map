@@ -32,7 +32,7 @@ git lfs pull || {
 
 # Verify files
 echo "✅ Verifying PMTiles files..."
-for file in Seattle_Parcels.pmtiles pmtiles/Building_HK.pmtiles pmtiles/LandParcel_Lot_HK.pmtiles; do
+for file in Seattle_Parcels.pmtiles Toronto_Parcels.pmtiles pmtiles/Building_HK.pmtiles pmtiles/LandParcel_Lot_HK.pmtiles; do
     if [ -f "$file" ]; then
         size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file")
         if [ $size -gt 1000000 ]; then
