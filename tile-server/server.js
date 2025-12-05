@@ -62,14 +62,18 @@ class FileSystemSource {
 }
 
 async function initPMTiles() {
-    const files = {
-        'land_parcels': 'LandParcel_Lot_HK.pmtiles',
-        'buildings': 'Building_HK.pmtiles'
-    };
-
-    for (const [name, filename] of Object.entries(files)) {
-        const filepath = path.join(TILES_DIR, filename);
-        if (fs.existsSync(filepath)) {
+    // Auto-discover all .pmtiles files in current directory and pmtiles subdirectory
+    const directories = [__dirname, path.join(__dirname, 'pmtiles')];
+    
+    for (const dir of directories) {
+        if (!fs.existsSync(dir)) continue;
+        
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.pmtiles'));
+        
+        for (const filename of files) {
+            const filepath = path.join(dir, filename);
+            const name = filename.replace('.pmtiles', '');
+            
             try {
                 const source = new FileSystemSource(filepath);
                 const pmtiles = new PMTiles(source);
@@ -80,8 +84,6 @@ async function initPMTiles() {
             } catch (error) {
                 console.error(`✗ Failed to load ${name}:`, error.message);
             }
-        } else {
-            console.error(`✗ File not found: ${filepath}`);
         }
     }
 }
