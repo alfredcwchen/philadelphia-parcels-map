@@ -4,7 +4,7 @@
   "description": "PMTiles tile server for parcels and buildings",
   "main": "server.js",
   "scripts": {
-    "postinstall": "./fetch-lfs-files.sh || echo 'LFS fetch skipped'",
+    "postinstall": "./download-pmtiles.sh || ./fetch-lfs-files.sh || echo 'PMTiles download skipped - files should already exist'",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
