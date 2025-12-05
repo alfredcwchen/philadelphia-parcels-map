@@ -568,10 +568,27 @@
             `;
             this._container.querySelector('#style-select').onchange = (e) => {
                 const style = e.target.value;
+                
+                // Save current visibility state of all layers
+                const layerVisibility = {};
+                ['hk-parcels-fill', 'hk-parcels-outline', 'hk-buildings-fill', 'hk-buildings-outline', 'philly-parcels-wms-layer'].forEach(layerId => {
+                    const layer = this._map.getLayer(layerId);
+                    if (layer) {
+                        layerVisibility[layerId] = this._map.getLayoutProperty(layerId, 'visibility') || 'visible';
+                    }
+                });
+                
                 this._map.setStyle(style);
                 // Re-add custom layers after style loads
                 this._map.once('style.load', () => {
                     this.readdCustomLayers();
+                    
+                    // Restore visibility state
+                    Object.keys(layerVisibility).forEach(layerId => {
+                        if (this._map.getLayer(layerId)) {
+                            this._map.setLayoutProperty(layerId, 'visibility', layerVisibility[layerId]);
+                        }
+                    });
                 });
             };
             return this._container;
