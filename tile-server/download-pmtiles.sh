@@ -47,4 +47,7 @@ download_if_needed "pmtiles/Building_HK.pmtiles" "${GH_LFS_BASE}/pmtiles/Buildin
 download_if_needed "pmtiles/LandParcel_Lot_HK.pmtiles" "${GH_LFS_BASE}/pmtiles/LandParcel_Lot_HK.pmtiles" || \
     echo "⚠️  Could not download LandParcel_Lot_HK.pmtiles"
 
+download_if_needed "BC_Parcels.pmtiles" "${GH_LFS_BASE}/BC_Parcels.pmtiles" || \
+    echo "⚠️  Could not download BC_Parcels.pmtiles"
+
 echo "✅ PMTiles download complete"

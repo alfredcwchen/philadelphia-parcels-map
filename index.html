@@ -1349,7 +1349,7 @@
         
         // Save current visibility state of all layers
         const layerVisibility = {};
-        ['hk-parcels-fill', 'hk-parcels-outline', 'hk-buildings-fill', 'hk-buildings-outline', 'philly-parcels-wms-layer', 'bc-parcels-wms-layer', 'seattle-parcels-fill', 'seattle-parcels-outline'].forEach(layerId => {
+        ['hk-parcels-fill', 'hk-parcels-outline', 'hk-buildings-fill', 'hk-buildings-outline', 'philly-parcels-wms-layer', 'bc-parcels-fill', 'bc-parcels-outline', 'seattle-parcels-fill', 'seattle-parcels-outline', 'toronto-parcels-fill', 'toronto-parcels-outline'].forEach(layerId => {
             const layer = map.getLayer(layerId);
             if (layer) {
                 layerVisibility[layerId] = map.getLayoutProperty(layerId, 'visibility') || 'visible';
@@ -1540,34 +1540,48 @@
             });
         }
         
-        // Re-add BC Canada Parcels WMS
-        if (!map.getSource('bc-parcels-wms')) {
-            map.addSource('bc-parcels-wms', {
-                'type': 'raster',
-                'tiles': [
-                    'https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW/ows?' +
-                    'SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW&' +
-                    'STYLES=5898&FORMAT=image/png&TRANSPARENT=true&' +
-                    'CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}'
-                ],
-                'tileSize': 256,
-                'attribution': 'BC ParcelMap',
-                'queryable': true
+        // Re-add BC Canada Parcels PMTiles
+        if (!map.getSource('bc-parcels-pmtiles')) {
+            map.addSource('bc-parcels-pmtiles', {
+                type: 'vector',
+                tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/BC_Parcels/{z}/{x}/{y}.pbf'],
+                minzoom: 10,
+                maxzoom: 16,
+                bounds: [-139.06, 48.30, -114.03, 60.00]
             });
         }
 
-        if (!map.getLayer('bc-parcels-wms-layer')) {
+        if (!map.getLayer('bc-parcels-fill')) {
             map.addLayer({
-                'id': 'bc-parcels-wms-layer',
-                'type': 'raster',
-                'source': 'bc-parcels-wms',
+                'id': 'bc-parcels-fill',
+                'type': 'fill',
+                'source': 'bc-parcels-pmtiles',
+                'source-layer': 'bc_parcels',
+                'minzoom': 10,
                 'paint': {
-                    'raster-opacity': 0.6
+                    'fill-color': 'transparent',
+                    'fill-opacity': 0
                 },
                 'layout': {
                     'visibility': 'none'
+                }
+            });
+        }
+
+        if (!map.getLayer('bc-parcels-outline')) {
+            map.addLayer({
+                'id': 'bc-parcels-outline',
+                'type': 'line',
+                'source': 'bc-parcels-pmtiles',
+                'source-layer': 'bc_parcels',
+                'minzoom': 10,
+                'paint': {
+                    'line-color': '#808080',
+                    'line-width': 0.5
                 },
-                'minzoom': 10
+                'layout': {
+                    'visibility': 'none'
+                }
             });
         }
         
@@ -1810,31 +1824,43 @@
             }
         });
 
-        // BC Canada Parcels WMS
-        map.addSource('bc-parcels-wms', {
-            'type': 'raster',
-            'tiles': [
-                'https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW/ows?' +
-                'SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW&' +
-                'STYLES=5898&FORMAT=image/png&TRANSPARENT=true&' +
-                'CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}'
-            ],
-            'tileSize': 256,
-            'attribution': 'BC ParcelMap',
-            'queryable': true
+        // BC Canada Parcels PMTiles
+        map.addSource('bc-parcels-pmtiles', {
+            type: 'vector',
+            tiles: ['https://terratone-tiles-mfayf.ondigitalocean.app/BC_Parcels/{z}/{x}/{y}.pbf'],
+            minzoom: 10,
+            maxzoom: 16,
+            bounds: [-139.06, 48.30, -114.03, 60.00], // BC province bounds
+            scheme: 'xyz'
         });
 
         map.addLayer({
-            'id': 'bc-parcels-wms-layer',
-            'type': 'raster',
-            'source': 'bc-parcels-wms',
+            'id': 'bc-parcels-fill',
+            'type': 'fill',
+            'source': 'bc-parcels-pmtiles',
+            'source-layer': 'bc_parcels',
             'paint': {
-                'raster-opacity': 0.6
+                'fill-color': 'transparent',
+                'fill-opacity': 0
             },
             'layout': {
                 'visibility': 'none'
             },
             'minzoom': 10
+        });
+
+        map.addLayer({
+            'id': 'bc-parcels-outline',
+            'type': 'line',
+            'source': 'bc-parcels-pmtiles',
+            'source-layer': 'bc_parcels',
+            'paint': {
+                'line-color': '#808080',
+                'line-width': 0.5
+            },
+            'layout': {
+                'visibility': 'none'
+            }
         });
         
         // Seattle Parcels PMTiles with optimizations
@@ -2440,13 +2466,46 @@
                 }
                 
                 // Check if BC Canada layer is visible
-                const bcParcelsLayer = map.getLayer('bc-parcels-wms-layer');
-                const bcParcelsVisible = bcParcelsLayer && map.getLayoutProperty('bc-parcels-wms-layer', 'visibility') !== 'none';
+                const bcParcelsLayer = map.getLayer('bc-parcels-fill');
+                const bcParcelsVisible = bcParcelsLayer && map.getLayoutProperty('bc-parcels-fill', 'visibility') !== 'none';
                 
-                // Only query BC WMS if layer is visible AND click is within BC bounds
+                // Only query BC PMTiles if layer is visible AND click is within BC bounds
                 if (bcParcelsVisible && isInBounds(regionBounds.bc)) {
-                    queryBCWMS();
-                    return;
+                    const bcFeatures = map.queryRenderedFeatures(e.point, {
+                        layers: ['bc-parcels-fill']
+                    });
+                    
+                    if (bcFeatures.length > 0) {
+                        const feature = bcFeatures[0];
+                        const isMobile = window.innerWidth <= 768;
+                        
+                        let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
+                        popupContent += '<div class="popup-title">BC Canada Parcel</div>';
+                        popupContent += '<div class="scrollable-content">';
+                        popupContent += '<table class="property-table">';
+                        
+                        for (const [key, value] of Object.entries(feature.properties)) {
+                            if (value !== null && value !== undefined && value !== '') {
+                                popupContent += `<tr><td class="prop-key">${key}</td><td class="prop-value">${value}</td></tr>`;
+                            }
+                        }
+                        
+                        popupContent += '</table></div>';
+                        
+                        if (isMobile) {
+                            popupContent += '<button onclick="togglePopupExpand()" class="popup-expand-btn" id="popup-expand-btn">▼ Show More Details</button>';
+                        }
+                        
+                        popupContent += '</div>';
+                        
+                        new mapboxgl.Popup()
+                            .setLngLat(e.lngLat)
+                            .setHTML(popupContent)
+                            .addTo(map);
+                        
+                        isClickProcessing = false;
+                        return;
+                    }
                 }
                 
                 // Query Philadelphia WMS only if click is within Philadelphia bounds
@@ -2625,106 +2684,6 @@
                 tryFeatureInfo();
                 } // End of queryPhiladelphiaWMS function
                 
-                function queryBCWMS() {
-                    // BC Canada WMS GetFeatureInfo query
-                    const bboxSize = MAP_CONFIG.BBOX_PRECISION;
-                    
-                    // Convert click coordinates to EPSG:3857 for BC WMS
-                    const point = map.project(e.lngLat);
-                    const bounds = map.getBounds();
-                    const sw = map.project(bounds.getSouthWest());
-                    const ne = map.project(bounds.getNorthEast());
-                    
-                    const width = Math.floor(ne.x - sw.x);
-                    const height = Math.floor(sw.y - ne.y);
-                    const x = Math.floor(point.x - sw.x);
-                    const y = Math.floor(point.y - ne.y);
-                    
-                    // Get bounds in EPSG:3857
-                    const swLngLat = bounds.getSouthWest();
-                    const neLngLat = bounds.getNorthEast();
-                    
-                    // Simple conversion to Web Mercator (approximate)
-                    const toWebMercator = (lngLat) => {
-                        const x = lngLat.lng * 20037508.34 / 180;
-                        const y = Math.log(Math.tan((90 + lngLat.lat) * Math.PI / 360)) / (Math.PI / 180);
-                        const yMerc = y * 20037508.34 / 180;
-                        return { x, y: yMerc };
-                    };
-                    
-                    const swMerc = toWebMercator(swLngLat);
-                    const neMerc = toWebMercator(neLngLat);
-                    
-                    const featureInfoUrl = 'https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW/ows?' +
-                        'SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0' +
-                        '&LAYERS=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW' +
-                        '&QUERY_LAYERS=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW' +
-                        '&STYLES=5898&INFO_FORMAT=application/json' +
-                        '&CRS=EPSG:3857&FORMAT=image/png&TRANSPARENT=true' +
-                        `&BBOX=${swMerc.x},${swMerc.y},${neMerc.x},${neMerc.y}` +
-                        `&WIDTH=${width}&HEIGHT=${height}` +
-                        `&I=${x}&J=${y}` +
-                        '&FEATURE_COUNT=10';
-                    
-                    console.log('BC WMS GetFeatureInfo URL:', featureInfoUrl);
-                    
-                    fetch(featureInfoUrl)
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log('BC WMS response:', data);
-                            
-                            if (data.features && data.features.length > 0) {
-                                const feature = data.features[0];
-                                const props = feature.properties;
-                                const isMobile = window.innerWidth <= 768;
-                                
-                                console.log('BC Mobile detection:', { isMobile, width: window.innerWidth });
-                                
-                                let popupContent = `<div class="popup-container ${isMobile ? 'compact' : ''}" id="popup-main">`;
-                                popupContent += '<div class="popup-title">BC Canada Parcel</div>';
-                                popupContent += '<div class="scrollable-content">';
-                                popupContent += '<table class="property-table">';
-                                
-                                // Display all properties
-                                for (const [key, value] of Object.entries(props)) {
-                                    if (value !== null && value !== undefined && value !== '') {
-                                        popupContent += `<tr><td class="prop-key">${key}</td><td class="prop-value">${value}</td></tr>`;
-                                    }
-                                }
-                                
-                                popupContent += '</table></div>';
-                                
-                                if (isMobile) {
-                                    popupContent += '<button onclick="togglePopupExpand()" class="popup-expand-btn" id="popup-expand-btn">▼ Show More Details</button>';
-                                }
-                                
-                                popupContent += '</div>';
-                                
-                                new mapboxgl.Popup()
-                                    .setLngLat(e.lngLat)
-                                    .setHTML(popupContent)
-                                    .addTo(map);
-                            } else {
-                                new mapboxgl.Popup()
-                                    .setLngLat(e.lngLat)
-                                    .setHTML('<div class="popup-container"><div class="no-data">No BC parcel data found at this location</div></div>')
-                                    .addTo(map);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('BC WMS Error:', error);
-                            new mapboxgl.Popup()
-                                .setLngLat(e.lngLat)
-                                .setHTML(`<div class="popup-container">
-                                    <div class="popup-title">Error</div>
-                                    <div class="no-data">Error querying BC parcel data: ${error.message}</div>
-                                </div>`)
-                                .addTo(map);
-                        })
-                        .finally(() => {
-                            isClickProcessing = false;
-                        });
-                } // End of queryBCWMS function
             } // End of zoom level check
         }); // End of map click handler
 
@@ -2756,8 +2715,9 @@
     
     document.getElementById('bc-parcels-toggle').addEventListener('change', function(e) {
         const visibility = e.target.checked ? 'visible' : 'none';
-        if (map.getLayer('bc-parcels-wms-layer')) {
-            map.setLayoutProperty('bc-parcels-wms-layer', 'visibility', visibility);
+        if (map.getLayer('bc-parcels-fill')) {
+            map.setLayoutProperty('bc-parcels-fill', 'visibility', visibility);
+            map.setLayoutProperty('bc-parcels-outline', 'visibility', visibility);
         }
     });
     
