@@ -914,6 +914,7 @@
             <button id="goto-bc" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #c41e3a; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to BC Canada</button>
             <button id="goto-seattle" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #0c5da5; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Seattle</button>
             <button id="goto-toronto" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #d4001d; color: white; border: none; border-radius: 4px; font-size: 13px;">Go to Toronto</button>
+            <button id="goto-home" style="width: 100%; padding: 8px; margin: 4px 0; cursor: pointer; background: #34495e; color: white; border: none; border-radius: 4px; font-size: 13px;">🏠 Go to Home</button>
         </div>
     </div>
 </div>
@@ -992,8 +993,8 @@
     const map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v11',
-        center: [-75.163471, 39.952583], // Philadelphia center coordinates
-        zoom: 11,
+        center: [-20, 35], // World view to see all city markers
+        zoom: 2,
         pitch: 0, // Initial pitch (0-85 degrees)
         bearing: 0, // Initial bearing (0-360 degrees)
         antialias: true, // For smoother 3D rendering
@@ -1979,6 +1980,9 @@
         }
     ];
 
+    // Store markers globally for visibility control
+    const cityMarkers = [];
+
     // Create markers for each city
     cities.forEach(city => {
         // Create a custom marker element
@@ -2019,9 +2023,24 @@
         });
 
         // Create marker and add to map
-        new mapboxgl.Marker(el)
+        const marker = new mapboxgl.Marker(el)
             .setLngLat(city.coordinates)
             .addTo(map);
+        
+        cityMarkers.push(marker);
+    });
+
+    // Hide markers when zoomed in (zoom > 6), show when zoomed out
+    map.on('zoom', () => {
+        const currentZoom = map.getZoom();
+        cityMarkers.forEach(marker => {
+            const markerEl = marker.getElement();
+            if (currentZoom > 6) {
+                markerEl.style.display = 'none';
+            } else {
+                markerEl.style.display = 'flex';
+            }
+        });
     });
 
     // Property grouping configuration
@@ -2853,6 +2872,14 @@
         map.flyTo({
             center: [-79.3832, 43.6532], // Toronto City Hall
             zoom: 13,
+            essential: true
+        });
+    });
+    
+    document.getElementById('goto-home').addEventListener('click', function() {
+        map.flyTo({
+            center: [-20, 35], // World view
+            zoom: 2,
             essential: true
         });
     });
